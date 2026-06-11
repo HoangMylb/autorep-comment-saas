@@ -2,27 +2,30 @@
 
 import { useState } from "react";
 import { Button, Form, Input, Modal } from "antd";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { apiClient } from "@/frontend/lib/api-client";
+import type { ApiResponse } from "@/frontend/types/api";
 
 export function SendTestCommentModal({ facebookPostId, buttonLabel = "Send test comment" }: { facebookPostId: string; buttonLabel?: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm<{ commenter_name: string; comment_message: string }>();
+  const router = useRouter();
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
-      const response = await apiClient.post("/mock/facebook/send-test-comment", {
+      const response = await apiClient.post<ApiResponse<{ matchedKeyword: string | null }>>("/mock/facebook/send-test-comment", {
         facebook_post_id: facebookPostId,
         ...values
       });
-      const matchedKeyword = response.data.data.matchedKeyword as string | null;
+      const matchedKeyword = response.data.data.matchedKeyword;
       toast.success(matchedKeyword ? `Matched keyword: ${matchedKeyword}` : "No keyword matched");
       setOpen(false);
       form.resetFields();
-      window.location.reload();
+      router.refresh();
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);

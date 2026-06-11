@@ -59,8 +59,7 @@ export function AutomationForm({ pages, posts, initialValue }: { pages: Facebook
         await apiClient.post("/automations", values);
         toast.success("Automation created");
       }
-      router.push("/dashboard/automations");
-      router.refresh();
+      router.replace("/dashboard/automations");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save automation");
     }

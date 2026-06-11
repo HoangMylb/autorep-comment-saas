@@ -1,8 +1,14 @@
 import type { Automation, CommentLog, FacebookPage, FacebookPost, OverviewStats, Profile } from "@/frontend/types/domain";
 
 export interface ApiResponse<T> {
+  code: number;
+  message: string;
   data: T;
-  message?: string;
+}
+
+export interface AuthPayload {
+  redirectTo: string;
+  email: string;
 }
 
 export interface DashboardPayload {

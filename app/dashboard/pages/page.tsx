@@ -4,13 +4,14 @@ import { getUserPages } from "@/backend/services/mock-facebook.service";
 import { EmptyState } from "@/frontend/components/common/empty-state";
 import { PageShell } from "@/frontend/components/common/page-shell";
 import { StatusBadge } from "@/frontend/features/dashboard/components/status-badge";
+import { SetupDemoButton } from "@/frontend/features/dashboard/components/setup-demo-button";
 
 export default async function FacebookPagesPage() {
   const user = await requireUser();
   const pages = await getUserPages(user.id);
 
   return (
-    <PageShell title="Facebook Pages" description="Use demo data to simulate connected pages and start the full automation flow." actions={<Button type="primary" href="/api/mock/facebook/setup-demo">Use Demo Facebook Page</Button>}>
+    <PageShell title="Facebook Pages" description="Use demo data to simulate connected pages and start the full automation flow." actions={<SetupDemoButton />}>
       {pages.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {pages.map((page) => (
@@ -30,7 +31,7 @@ export default async function FacebookPagesPage() {
           ))}
         </div>
       ) : (
-        <EmptyState title="No Facebook Pages yet" description="Generate a demo page and posts to test the entire product flow without real Facebook APIs." action={{ label: "Use Demo Facebook Page", href: "/api/mock/facebook/setup-demo" }} />
+        <EmptyState title="No Facebook Pages yet" description="Generate a demo page and posts to test the entire product flow without real Facebook APIs." action={{ label: "Use Demo Facebook Page", render: <SetupDemoButton /> }} />
       )}
     </PageShell>
   );

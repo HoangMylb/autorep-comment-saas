@@ -3,28 +3,39 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button, Card, Form, Input } from "antd";
 import Link from "next/link";
-import { Controller, useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { Controller, useForm, type FieldErrors } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { createClient } from "@/frontend/lib/supabase/client";
+import { apiClient } from "@/frontend/lib/api-client";
+import type { ApiResponse, AuthPayload } from "@/frontend/types/api";
 
-const authSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-  fullName: z.string().min(2)
+const loginSchema = z.object({
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters")
 });
 
-type AuthValues = z.infer<typeof authSchema>;
+const registerSchema = z.object({
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  fullName: z.string().min(2, "Full name must be at least 2 characters")
+});
+
+type LoginValues = z.infer<typeof loginSchema>;
+type RegisterValues = z.infer<typeof registerSchema>;
+type AuthValues = LoginValues | RegisterValues;
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const isRegister = mode === "register";
+  const router = useRouter();
+  const resolver = isRegister ? zodResolver(registerSchema) : zodResolver(loginSchema);
 
   const {
     control,
     handleSubmit,
     formState: { isSubmitting, errors }
   } = useForm<AuthValues>({
-    resolver: zodResolver(authSchema),
+    resolver,
     defaultValues: {
       email: "",
       password: "",
@@ -32,39 +43,42 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     }
   });
 
-  const onSubmit = async (values: AuthValues) => {
-    const supabase = createClient();
-
-    if (isRegister) {
-      const { error } = await supabase.auth.signUp({
+  const handleRegisterSubmit = async (values: RegisterValues) => {
+    try {
+      const response = await apiClient.post<ApiResponse<AuthPayload>>("/auth/register", {
         email: values.email,
         password: values.password,
-        options: {
-          data: {
-            full_name: values.fullName
-          }
-        }
+        fullName: values.fullName
       });
-
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-
-      toast.success("Account created. Check your email to confirm sign up.");
-      return;
+      toast.success(response.data.message);
+      router.replace(response.data.data.redirectTo);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Registration failed");
     }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password
-    });
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    window.location.href = "/dashboard";
   };
+
+  const handleLoginSubmit = async (values: LoginValues) => {
+    try {
+      const response = await apiClient.post<ApiResponse<AuthPayload>>("/auth/login", {
+        email: values.email,
+        password: values.password
+      });
+      toast.success(response.data.message);
+      router.replace(response.data.data.redirectTo);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Authentication failed");
+    }
+  };
+
+  const onSubmit = (values: AuthValues) => {
+    if (isRegister) {
+      return handleRegisterSubmit(values as RegisterValues);
+    }
+
+    return handleLoginSubmit(values as LoginValues);
+  };
+
+  const registerErrors = errors as FieldErrors<RegisterValues>;
 
   return (
     <Card className="w-full max-w-md rounded-[32px] border-slate-200">
@@ -76,7 +90,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       </div>
       <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
         {isRegister ? (
-          <Form.Item label="Full name" validateStatus={errors["fullName"] ? "error" : ""} help={errors["fullName"]?.message?.toString()}>
+          <Form.Item label="Full name" validateStatus={registerErrors.fullName ? "error" : ""} help={registerErrors.fullName?.message?.toString()}>
             <Controller name="fullName" control={control} render={({ field }) => <Input {...field} size="large" />} />
           </Form.Item>
         ) : null}

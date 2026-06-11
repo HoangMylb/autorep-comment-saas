@@ -12,5 +12,6 @@ export const adminNavItems = [
   { href: "/admin/users", label: "Users" },
   { href: "/admin/pages", label: "Pages" },
   { href: "/admin/automations", label: "Automations" },
-  { href: "/admin/logs", label: "Logs" }
+  { href: "/admin/logs", label: "Logs" },
+  { href: "/admin/system-logs", label: "System Logs" }
 ];

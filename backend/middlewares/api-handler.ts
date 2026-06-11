@@ -1,33 +1,34 @@
 import { NextResponse } from "next/server";
 
 interface ApiSuccess<T> {
-  code: 0;
+  success: true;
   message: string;
   data: T;
 }
 
 interface ApiFailure {
-  code: 1;
+  success: false;
   message: string;
-  data: null;
+  error: string;
 }
 
 export async function withApiHandler<T>(action: () => Promise<T>, successStatus = 200) {
   try {
     const data = await action();
     const body: ApiSuccess<T> = {
-      code: 0,
-      message: successStatus === 201 ? "Created successfully" : "Success",
+      success: true,
+      message: successStatus === 201 ? "Created successfully" : "OK",
       data
     };
-    return NextResponse.json(body, { status: 200 });
+    return NextResponse.json(body, { status: successStatus });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     const body: ApiFailure = {
-      code: 1,
+      success: false,
       message,
-      data: null
+      error: message
     };
-    return NextResponse.json(body, { status: 200 });
+    const status = message === "Unauthorized" ? 401 : message === "Forbidden" ? 403 : 400;
+    return NextResponse.json(body, { status });
   }
 }

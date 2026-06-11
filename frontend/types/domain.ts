@@ -2,6 +2,9 @@ export type UserRole = "admin" | "user";
 export type UserStatus = "active" | "blocked";
 export type PageStatus = "connected" | "expired" | "disconnected";
 export type DeliveryStatus = "success" | "failed" | "skipped";
+export type ConnectionType = "mock" | "facebook";
+export type ProcessingStatus = "processed" | "skipped" | "failed";
+export type SystemLogLevel = "info" | "warning" | "error";
 
 export interface Profile {
   id: string;
@@ -29,7 +32,13 @@ export interface FacebookPage {
   page_id: string;
   page_name: string;
   page_avatar_url: string | null;
+  user_access_token?: string | null;
   page_access_token: string | null;
+  token_expires_at?: string | null;
+  permissions?: string[];
+  connection_type?: ConnectionType;
+  last_synced_at?: string | null;
+  error_message?: string | null;
   status: PageStatus;
   is_mock: boolean;
   connected_at: string;
@@ -47,6 +56,8 @@ export interface FacebookPost {
   image_url: string | null;
   permalink_url: string | null;
   created_time: string | null;
+  connection_type?: ConnectionType;
+  raw_payload?: Record<string, unknown> | null;
   is_mock: boolean;
   created_at: string;
   updated_at: string;
@@ -83,6 +94,9 @@ export interface CommentLog {
   matched_keyword: string | null;
   inbox_status: DeliveryStatus;
   public_reply_status: DeliveryStatus;
+  source?: ConnectionType;
+  event_type?: string | null;
+  processing_status?: ProcessingStatus;
   error_message: string | null;
   raw_payload: Record<string, unknown> | null;
   created_at: string;
@@ -90,4 +104,13 @@ export interface CommentLog {
   facebook_pages?: { page_name?: string };
   facebook_posts?: { message?: string | null };
   profiles?: { email?: string; full_name?: string | null };
+}
+
+export interface SystemLog {
+  id: string;
+  level: SystemLogLevel;
+  source: string;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
 }

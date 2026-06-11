@@ -11,8 +11,8 @@ export const apiClient = axios.create({
 apiClient.interceptors.response.use(
   (response) => {
     const payload = response.data as ApiResponse<unknown>;
-    if (typeof payload?.code === "number" && payload.code !== 0) {
-      return Promise.reject(new Error(payload.message || "Request failed"));
+    if (payload?.success === false) {
+      return Promise.reject(new Error(payload.error || payload.message || "Request failed"));
     }
     return response;
   },

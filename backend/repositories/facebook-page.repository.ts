@@ -52,3 +52,62 @@ export async function getAllPagesForAdmin() {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function getPageByFacebookPageId(pageId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from("facebook_pages").select("*").eq("page_id", pageId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function upsertFacebookPages(
+  userId: string,
+  pages: Array<{
+    page_id: string;
+    page_name: string;
+    page_avatar_url: string | null;
+    page_access_token: string | null;
+    user_access_token: string | null;
+    token_expires_at: string | null;
+    permissions: string[];
+    status: string;
+    error_message: string | null;
+  }>
+) {
+  const supabase = createAdminClient();
+  const payload = pages.map((page) => ({
+    ...page,
+    user_id: userId,
+    connection_type: "facebook",
+    is_mock: false,
+    updated_at: new Date().toISOString()
+  }));
+
+  const { data, error } = await supabase.from("facebook_pages").upsert(payload, { onConflict: "user_id,page_id" }).select("*");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function updateFacebookPageStatus(pageRecordId: string, userId: string, input: Record<string, unknown>) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("facebook_pages")
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq("id", pageRecordId)
+    .eq("user_id", userId)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function disconnectFacebookPage(pageRecordId: string, userId: string) {
+  return updateFacebookPageStatus(pageRecordId, userId, {
+    status: "disconnected",
+    user_access_token: null,
+    page_access_token: null,
+    token_expires_at: null,
+    permissions: [],
+    error_message: null
+  });
+}

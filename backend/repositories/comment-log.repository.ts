@@ -45,3 +45,17 @@ export async function getAllLogsForAdmin(filters: LogFilters) {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function findSuccessfulLogByCommentAndAutomation(commentId: string, automationId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("comment_logs")
+    .select("*")
+    .eq("comment_id", commentId)
+    .eq("automation_id", automationId)
+    .eq("processing_status", "processed")
+    .or("inbox_status.eq.success,public_reply_status.eq.success")
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}

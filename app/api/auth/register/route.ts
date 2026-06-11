@@ -32,24 +32,24 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        code: 0,
+        success: true,
         message: "Account created successfully",
         data: {
           email: body.email,
           redirectTo: "/login"
         }
       },
-      { status: 200 }
+      { status: 201 }
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     return NextResponse.json(
       {
-        code: 1,
+        success: false,
         message,
-        data: null
+        error: message
       },
-      { status: 200 }
+      { status: 400 }
     );
   }
 }

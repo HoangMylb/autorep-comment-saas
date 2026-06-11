@@ -9,7 +9,7 @@ export default async function AdminLogsPage({ searchParams }: { searchParams: Pr
   const logs = await getAdminLogs(filters);
 
   return (
-    <PageShell title="Logs" description="Admin visibility into all mock comment logs across the system.">
+    <PageShell title="Logs" description="Admin visibility into mock and Facebook processing logs across the system.">
       <LogsTable logs={logs} />
     </PageShell>
   );

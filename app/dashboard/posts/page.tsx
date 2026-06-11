@@ -6,6 +6,7 @@ import { PageShell } from "@/frontend/components/common/page-shell";
 import { formatDate } from "@/frontend/lib/utils";
 import { SendTestCommentModal } from "@/frontend/features/dashboard/components/send-test-comment-modal";
 import { SetupDemoButton } from "@/frontend/features/dashboard/components/setup-demo-button";
+import { StatusBadge } from "@/frontend/features/dashboard/components/status-badge";
 
 export default async function PostsPage({ searchParams }: { searchParams: Promise<{ pageId?: string }> }) {
   const user = await requireUser();
@@ -20,13 +21,16 @@ export default async function PostsPage({ searchParams }: { searchParams: Promis
         <div className="grid gap-4 xl:grid-cols-2">
           {posts.map((post) => (
             <Card key={post.id} className="rounded-[28px] border-slate-200">
-              <p className="text-sm text-slate-500">{post.facebook_pages?.page_name ?? "Page"}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-slate-500">{post.facebook_pages?.page_name ?? "Page"}</p>
+                <StatusBadge status={post.connection_type ?? (post.is_mock ? "mock" : "facebook")} />
+              </div>
               <p className="mt-2 text-base text-slate-700">{post.message}</p>
               <p className="mt-3 text-sm text-slate-500">Created: {formatDate(post.created_time ?? post.created_at)}</p>
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button type="primary" href={`/dashboard/automations/new?postId=${post.id}`}>Create Automation</Button>
                 <Button href={`/dashboard/automations?postId=${post.id}`}>View Automations</Button>
-                <SendTestCommentModal facebookPostId={post.id} />
+                {post.is_mock ? <SendTestCommentModal facebookPostId={post.id} /> : <Button disabled>Mock test only</Button>}
               </div>
             </Card>
           ))}

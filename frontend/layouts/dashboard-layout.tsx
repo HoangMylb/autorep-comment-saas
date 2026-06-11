@@ -3,8 +3,10 @@
 import { Button, Layout, Menu } from "antd";
 import type { MenuProps } from "antd";
 import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/frontend/lib/supabase/client";
+import { toast } from "sonner";
 import { Logo } from "@/frontend/components/common/logo";
+import { apiClient } from "@/frontend/lib/api-client";
+import type { ApiSuccessResponse, AuthPayload } from "@/frontend/types/api";
 
 const { Sider, Header, Content } = Layout;
 
@@ -26,9 +28,13 @@ export function DashboardLayout({
   }));
 
   const logout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
+    try {
+      const response = await apiClient.post<ApiSuccessResponse<AuthPayload>>("/auth/logout");
+      toast.success(response.data.message);
+      router.replace(response.data.data.redirectTo);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Logout failed");
+    }
   };
 
   return (

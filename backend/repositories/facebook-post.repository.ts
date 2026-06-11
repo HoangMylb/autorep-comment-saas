@@ -74,3 +74,54 @@ export async function getAllPostsForAdmin() {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function getPostByFacebookPostId(postId: string, pageRecordId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("facebook_posts")
+    .select("*, facebook_pages(*)")
+    .eq("post_id", postId)
+    .eq("facebook_page_id", pageRecordId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function upsertFacebookPosts(userId: string, pageRecordId: string, posts: Array<Record<string, unknown>>) {
+  const supabase = createAdminClient();
+  const payload = posts.map((post) => ({
+    ...post,
+    user_id: userId,
+    facebook_page_id: pageRecordId,
+    connection_type: "facebook",
+    is_mock: false,
+    updated_at: new Date().toISOString()
+  }));
+
+  const { data, error } = await supabase.from("facebook_posts").upsert(payload, { onConflict: "facebook_page_id,post_id" }).select("*");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createPlaceholderFacebookPost(userId: string, pageRecordId: string, postId: string, rawPayload: Record<string, unknown>) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("facebook_posts")
+    .insert({
+      user_id: userId,
+      facebook_page_id: pageRecordId,
+      post_id: postId,
+      message: null,
+      image_url: null,
+      permalink_url: null,
+      created_time: null,
+      raw_payload: rawPayload,
+      connection_type: "facebook",
+      is_mock: false,
+      updated_at: new Date().toISOString()
+    })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}

@@ -5,7 +5,7 @@ import { Button, Form, Input, Modal } from "antd";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { apiClient } from "@/frontend/lib/api-client";
-import type { ApiResponse } from "@/frontend/types/api";
+import type { ApiSuccessResponse } from "@/frontend/types/api";
 
 export function SendTestCommentModal({ facebookPostId, buttonLabel = "Send test comment" }: { facebookPostId: string; buttonLabel?: string }) {
   const [open, setOpen] = useState(false);
@@ -17,7 +17,7 @@ export function SendTestCommentModal({ facebookPostId, buttonLabel = "Send test 
     try {
       const values = await form.validateFields();
       setLoading(true);
-      const response = await apiClient.post<ApiResponse<{ matchedKeyword: string | null }>>("/mock/facebook/send-test-comment", {
+      const response = await apiClient.post<ApiSuccessResponse<{ matchedKeyword: string | null }>>("/mock/facebook/send-test-comment", {
         facebook_post_id: facebookPostId,
         ...values
       });

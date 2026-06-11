@@ -8,7 +8,7 @@ import { Controller, useForm, type FieldErrors } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { apiClient } from "@/frontend/lib/api-client";
-import type { ApiResponse, AuthPayload } from "@/frontend/types/api";
+import type { ApiSuccessResponse, AuthPayload } from "@/frontend/types/api";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email"),
@@ -45,7 +45,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   const handleRegisterSubmit = async (values: RegisterValues) => {
     try {
-      const response = await apiClient.post<ApiResponse<AuthPayload>>("/auth/register", {
+      const response = await apiClient.post<ApiSuccessResponse<AuthPayload>>("/auth/register", {
         email: values.email,
         password: values.password,
         fullName: values.fullName
@@ -59,7 +59,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   const handleLoginSubmit = async (values: LoginValues) => {
     try {
-      const response = await apiClient.post<ApiResponse<AuthPayload>>("/auth/login", {
+      const response = await apiClient.post<ApiSuccessResponse<AuthPayload>>("/auth/login", {
         email: values.email,
         password: values.password
       });

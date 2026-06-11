@@ -8,7 +8,7 @@ export default async function AdminPagesPage() {
   const pages = await getAdminPages();
 
   return (
-    <PageShell title="Pages" description="Admin visibility into all mock-connected Facebook Pages across users.">
+    <PageShell title="Pages" description="Admin visibility into mock and real Facebook Pages, connection health, and sync errors across users.">
       <AdminPagesTable pages={pages} />
     </PageShell>
   );

@@ -1,4 +1,5 @@
 import { createClient } from "@/frontend/lib/supabase/server";
+import { getProfileById } from "@/backend/repositories/profile-repository";
 import type { RequestUser } from "@/backend/types";
 
 export async function getRequestUser(): Promise<RequestUser | null> {
@@ -10,17 +11,21 @@ export async function getRequestUser(): Promise<RequestUser | null> {
 
   if (!user) return null;
 
-  const role = (user.app_metadata.role ?? user.user_metadata.role ?? "user") as "admin" | "user";
+  const profile = await getProfileById(user.id);
+  const role = (profile?.role ?? user.app_metadata.role ?? user.user_metadata.role ?? "user") as "admin" | "user";
+  const status = (profile?.status ?? "active") as "active" | "blocked";
+
   return {
     id: user.id,
     email: user.email,
-    role
+    role,
+    status
   };
 }
 
 export async function requireUser() {
   const user = await getRequestUser();
-  if (!user) {
+  if (!user || user.status !== "active") {
     throw new Error("Unauthorized");
   }
   return user;

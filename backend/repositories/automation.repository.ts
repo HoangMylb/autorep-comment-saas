@@ -65,3 +65,22 @@ export async function getAllAutomationsForAdmin() {
   if (error) throw error;
   return data ?? [];
 }
+
+export async function getAutomationsByPage(userId: string, pageId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from("automations").select("*").eq("user_id", userId).eq("facebook_page_id", pageId);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function deactivateAutomationsByPage(userId: string, pageId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("automations")
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("facebook_page_id", pageId)
+    .select("*");
+  if (error) throw error;
+  return data ?? [];
+}

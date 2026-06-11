@@ -1,0 +1,11 @@
+import { withApiHandler } from "@/backend/middlewares/api-handler";
+import { requireUser } from "@/backend/lib/auth";
+import { getUserPages } from "@/backend/services/mock-facebook.service";
+
+export async function GET() {
+  return withApiHandler(async () => {
+    const user = await requireUser();
+    const pages = await getUserPages(user.id);
+    return { pages };
+  });
+}

@@ -104,6 +104,9 @@ export async function sendTestComment(userId: string, input: unknown) {
       matched_keyword: null,
       inbox_status: "skipped",
       public_reply_status: "skipped",
+      source: "simulated_facebook",
+      event_type: "test_comment",
+      processing_status: "skipped",
       error_message: "No active automation found"
     });
     return { matched: false, matchedKeyword: null, log };
@@ -118,7 +121,10 @@ export async function sendTestComment(userId: string, input: unknown) {
       matched_keyword: null,
       inbox_status: "skipped",
       public_reply_status: "skipped",
-      error_message: null
+      source: "simulated_facebook",
+      event_type: "test_comment",
+      processing_status: "skipped",
+      error_message: "No keyword matched"
     });
     return { matched: false, matchedKeyword: null, log };
   }
@@ -126,12 +132,15 @@ export async function sendTestComment(userId: string, input: unknown) {
   const matchedKeyword = matchKeyword(validated.comment_message, matchedAutomation.keywords);
   const log = await createLog({
     ...basePayload,
-    automation_id: matchedAutomation.id,
-    matched_keyword: matchedKeyword,
-    inbox_status: "success",
-    public_reply_status: matchedAutomation.public_reply_message ? "success" : "skipped",
-    error_message: null
-  });
+      automation_id: matchedAutomation.id,
+      matched_keyword: matchedKeyword,
+      inbox_status: "skipped",
+      public_reply_status: "skipped",
+      source: "simulated_facebook",
+      event_type: "test_comment",
+      processing_status: "processed",
+      error_message: "Private reply skipped for simulated comment"
+    });
 
   return { matched: true, matchedKeyword, log, automation: matchedAutomation };
 }

@@ -57,11 +57,29 @@ export async function sendPrivateReplyToComment(input: PrivateReplyInput): Promi
     };
   }
 
-  return {
-    success: false,
-    status: "failed",
-    errorMessage: "Missing Facebook permission or App Review not approved"
-  };
+  try {
+    const rawResponse = await fetchFacebookApi<{ id?: string }>(
+      `https://graph.facebook.com/${env.FACEBOOK_GRAPH_API_VERSION}/${input.commentId}/private_replies`,
+      new URLSearchParams({
+        message: input.commentMessage,
+        access_token: input.pageAccessToken
+      })
+    );
+
+    return {
+      success: true,
+      status: "success",
+      rawResponse
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Facebook private reply failed";
+    return {
+      success: false,
+      status: "failed",
+      errorMessage: message,
+      rawResponse: null
+    };
+  }
 }
 
 export async function sendPublicReplyToComment(input: PublicReplyInput): Promise<FacebookMessageResult> {

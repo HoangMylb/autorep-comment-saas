@@ -107,6 +107,8 @@ async function createSkippedLog(input: {
   processingStatus: "skipped" | "failed" | "processed";
   errorMessage: string;
   rawPayload: Record<string, unknown>;
+  source?: "facebook" | "simulated_facebook";
+  eventType?: string;
 }) {
   return createLog({
     user_id: input.userId,
@@ -120,8 +122,8 @@ async function createSkippedLog(input: {
     matched_keyword: input.matchedKeyword,
     inbox_status: "skipped",
     public_reply_status: "skipped",
-    source: "facebook",
-    event_type: "comment",
+    source: input.source ?? "facebook",
+    event_type: input.eventType ?? "comment",
     processing_status: input.processingStatus,
     error_message: input.errorMessage,
     raw_payload: input.rawPayload
@@ -204,12 +206,19 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
 
   const matchedKeyword = matchKeyword(event.commentMessage, matchedAutomation.keywords);
   const errorMessages = [] as string[];
+  const isSimulatedComment = event.commentId.startsWith("test_") || event.commentId.startsWith("mock_");
 
-  const privateReplyResult = await sendPrivateReplyToComment({
-    pageAccessToken: page.page_access_token,
-    commentId: event.commentId,
-    commentMessage: matchedAutomation.inbox_message
-  });
+  const privateReplyResult = isSimulatedComment
+    ? {
+        success: true,
+        status: "skipped" as const,
+        errorMessage: "Private reply skipped for simulated comment"
+      }
+    : await sendPrivateReplyToComment({
+        pageAccessToken: page.page_access_token,
+        commentId: event.commentId,
+        commentMessage: matchedAutomation.inbox_message
+      });
 
   const publicReplyResult = await sendPublicReplyToComment({
     pageAccessToken: page.page_access_token,
@@ -239,7 +248,7 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
     matched_keyword: matchedKeyword,
     inbox_status: privateReplyResult.status,
     public_reply_status: publicReplyResult.status,
-    source: "facebook",
+    source: isSimulatedComment ? "simulated_facebook" : "facebook",
     event_type: "comment",
     processing_status: processingStatus,
     error_message: errorMessages.join(" | "),

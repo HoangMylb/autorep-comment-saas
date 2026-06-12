@@ -21,7 +21,7 @@ interface FacebookAccountsResponse {
     name: string;
     access_token?: string;
     picture?: { data?: { url?: string } };
-    perms?: string[];
+    tasks?: string[];
   }>;
 }
 
@@ -123,7 +123,7 @@ export async function getLongLivedUserAccessToken(shortLivedToken: string) {
 export async function fetchUserPages(userAccessToken: string) {
   const env = requireFacebookConfig();
   const params = new URLSearchParams({
-    fields: "id,name,access_token,picture{url},perms",
+    fields: "id,name,access_token,picture{url},tasks",
     access_token: userAccessToken
   });
 
@@ -158,7 +158,7 @@ export async function handleFacebookCallback(code: string, state: string) {
     page_access_token: page.access_token ?? null,
     user_access_token: userAccessToken,
     token_expires_at: tokenExpiresAt,
-    permissions: page.perms ?? [],
+    permissions: page.tasks ?? [],
     status: "connected",
     error_message: null
   }));

@@ -40,6 +40,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(result.redirectTo, redirectUrl.origin));
   } catch (callbackError) {
     const message = callbackError instanceof Error ? callbackError.message : "Unknown error";
+    console.error("[facebook-callback] graph api error", callbackError);
     console.error("[facebook-callback] failed", callbackError);
     try {
       await logFacebookSystemEvent({

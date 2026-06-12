@@ -1,1 +1,1 @@
-{"version":1,"functions":{"/api/facebook/callback":{},"/api/facebook/webhook":{},"/api/facebook/connect":{}}}
+{"version":1,"functions":{"/api/facebook/connect":{},"/api/facebook/webhook":{},"/api/facebook/callback":{}}}

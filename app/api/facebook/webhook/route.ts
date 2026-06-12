@@ -60,7 +60,7 @@ export async function POST(request: Request) {
         message,
         error: message
       },
-      { status: 400 }
+      { status: 200 }
     );
   }
 }

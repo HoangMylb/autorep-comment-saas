@@ -30,6 +30,16 @@ interface AccessTokenResponse {
   expires_in?: number;
 }
 
+const FACEBOOK_OAUTH_SCOPES = [
+  "public_profile",
+  "email",
+  "pages_show_list",
+  "pages_read_engagement",
+  "pages_manage_metadata",
+  "pages_manage_engagement",
+  "pages_read_user_content"
+] as const;
+
 function requireFacebookConfig() {
   const env = getServerEnv();
 
@@ -76,13 +86,7 @@ export function getFacebookLoginUrl(userId: string) {
     redirect_uri: redirectUri,
     state,
     response_type: "code",
-    scope: [
-      "public_profile",
-      "email",
-      "pages_show_list",
-      "pages_read_engagement",
-      "pages_manage_metadata"
-    ].join(",")
+    scope: FACEBOOK_OAUTH_SCOPES.join(",")
   });
 
   return {
@@ -119,7 +123,7 @@ export async function getLongLivedUserAccessToken(shortLivedToken: string) {
 export async function fetchUserPages(userAccessToken: string) {
   const env = requireFacebookConfig();
   const params = new URLSearchParams({
-    fields: "id,name,access_token",
+    fields: "id,name,access_token,picture{url},perms",
     access_token: userAccessToken
   });
 

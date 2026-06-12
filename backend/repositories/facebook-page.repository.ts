@@ -108,6 +108,16 @@ export async function disconnectFacebookPage(pageRecordId: string, userId: strin
     page_access_token: null,
     token_expires_at: null,
     permissions: [],
+    webhook_subscribed: false,
+    webhook_subscribed_at: null,
+    error_message: null
+  });
+}
+
+export async function markFacebookPageWebhookSubscribed(pageRecordId: string, userId: string) {
+  return updateFacebookPageStatus(pageRecordId, userId, {
+    webhook_subscribed: true,
+    webhook_subscribed_at: new Date().toISOString(),
     error_message: null
   });
 }

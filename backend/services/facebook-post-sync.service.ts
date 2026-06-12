@@ -1,6 +1,6 @@
 import { getServerEnv } from "@/backend/lib/env";
 import { logFacebookSystemEvent, maskSensitiveToken } from "@/backend/lib/facebook-log";
-import { disconnectFacebookPage, getPageById, updateFacebookPageStatus } from "@/backend/repositories/facebook-page.repository";
+import { disconnectFacebookPage, getPageById, markFacebookPageWebhookSubscribed, updateFacebookPageStatus } from "@/backend/repositories/facebook-page.repository";
 import { upsertFacebookPosts } from "@/backend/repositories/facebook-post.repository";
 import { deactivateAutomationsByPage } from "@/backend/repositories/automation.repository";
 
@@ -152,4 +152,72 @@ export async function disconnectFacebookPageAndDisableAutomations(userId: string
   });
 
   return disconnectedPage;
+}
+
+export async function subscribeFacebookPageWebhook(userId: string, facebookPageRecordId: string) {
+  const page = await getPageById(facebookPageRecordId, userId);
+
+  if (!page) {
+    throw new Error("Facebook page not found");
+  }
+
+  if (page.connection_type !== "facebook") {
+    throw new Error("Webhook subscription is only available for real Facebook pages");
+  }
+
+  if (!page.page_access_token) {
+    throw new Error("Missing Facebook page access token");
+  }
+
+  const env = getServerEnv();
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v25.0/${page.page_id}/subscribed_apps?access_token=${encodeURIComponent(page.page_access_token)}`,
+      {
+        method: "POST",
+        cache: "no-store"
+      }
+    );
+
+    const data = (await response.json()) as { success?: boolean; error?: { message?: string } };
+
+    if (!response.ok || data.error || data.success !== true) {
+      throw new Error(data.error?.message || "Failed to subscribe Facebook page webhook");
+    }
+
+    const updatedPage = await markFacebookPageWebhookSubscribed(page.id, userId);
+
+    await logFacebookSystemEvent({
+      level: "info",
+      source: "facebook_api",
+      message: "Facebook page subscribed to webhook successfully",
+      metadata: {
+        userId,
+        pageId: page.page_id,
+        graphApiVersion: env.FACEBOOK_GRAPH_API_VERSION
+      }
+    });
+
+    return updatedPage;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to subscribe Facebook page webhook";
+
+    await updateFacebookPageStatus(page.id, userId, {
+      error_message: message
+    });
+
+    await logFacebookSystemEvent({
+      level: "error",
+      source: "facebook_api",
+      message: "Facebook page webhook subscription failed",
+      metadata: {
+        userId,
+        pageId: page.page_id,
+        error: message,
+        graphApiVersion: env.FACEBOOK_GRAPH_API_VERSION
+      }
+    });
+    throw error;
+  }
 }

@@ -38,6 +38,8 @@ export interface FacebookPage {
   permissions?: string[];
   connection_type?: ConnectionType;
   last_synced_at?: string | null;
+  webhook_subscribed?: boolean;
+  webhook_subscribed_at?: string | null;
   error_message?: string | null;
   status: PageStatus;
   is_mock: boolean;

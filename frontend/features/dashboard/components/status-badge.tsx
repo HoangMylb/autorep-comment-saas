@@ -4,10 +4,12 @@ export function StatusBadge({ status }: { status: string }) {
   const color =
     status === "success"
       ? "green"
-      : status === "failed" || status === "expired" || status === "error"
+      : status === "failed" || status === "failed_permission" || status === "expired" || status === "error"
         ? "red"
         : status === "connected" || status === "processed"
           ? "blue"
+          : status === "processed_with_errors"
+            ? "orange"
           : status === "mock"
             ? "purple"
             : status === "facebook"

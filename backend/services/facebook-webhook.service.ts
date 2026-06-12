@@ -234,7 +234,13 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
     errorMessages.push(publicReplyResult.errorMessage);
   }
 
-  const processingStatus = privateReplyResult.status === "failed" || publicReplyResult.status === "failed" ? "failed" : "processed";
+  const processingStatus =
+    privateReplyResult.status === "failed" ||
+    privateReplyResult.status === "failed_permission" ||
+    publicReplyResult.status === "failed" ||
+    publicReplyResult.status === "failed_permission"
+      ? "processed_with_errors"
+      : "processed";
 
   const log = await createLog({
     user_id: page.user_id,

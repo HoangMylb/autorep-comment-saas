@@ -1,9 +1,9 @@
 export type UserRole = "admin" | "user";
 export type UserStatus = "active" | "blocked";
 export type PageStatus = "connected" | "expired" | "disconnected";
-export type DeliveryStatus = "success" | "failed" | "skipped";
+export type DeliveryStatus = "success" | "failed" | "failed_permission" | "skipped";
 export type ConnectionType = "mock" | "facebook" | "simulated_facebook";
-export type ProcessingStatus = "processed" | "skipped" | "failed";
+export type ProcessingStatus = "processed" | "processed_with_errors" | "skipped" | "failed";
 export type SystemLogLevel = "info" | "warning" | "error";
 
 export interface Profile {

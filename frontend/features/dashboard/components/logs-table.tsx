@@ -20,7 +20,17 @@ const columns: ColumnsType<CommentLog> = [
       value === "skipped" && record.source === "simulated_facebook" ? <Tag color="gold">skipped (test)</Tag> : <StatusBadge status={value} />
   },
   { title: "Public reply", dataIndex: "public_reply_status", key: "public_reply_status", render: (value: string) => <StatusBadge status={value} /> },
-  { title: "Error", dataIndex: "error_message", key: "error_message", render: (value: string | null) => value ? <span className="text-red-500">{value}</span> : "-" },
+  {
+    title: "Error",
+    dataIndex: "error_message",
+    key: "error_message",
+    render: (value: string | null) =>
+      value === "Missing Facebook permission or App Review not approved"
+        ? <span className="text-red-500">Matched keyword, missing Meta permission for reply</span>
+        : value
+          ? <span className="text-red-500">{value}</span>
+          : "-"
+  },
   { title: "Created", dataIndex: "created_at", key: "created_at", render: (value: string) => formatDate(value) }
 ];
 

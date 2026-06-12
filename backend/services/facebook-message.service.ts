@@ -2,7 +2,7 @@ import { getServerEnv } from "@/backend/lib/env";
 
 export interface FacebookMessageResult {
   success: boolean;
-  status: "success" | "failed" | "skipped";
+  status: "success" | "failed" | "failed_permission" | "skipped";
   errorMessage?: string;
   rawResponse?: unknown;
 }
@@ -41,6 +41,8 @@ async function fetchFacebookApi<T>(url: string, body: URLSearchParams) {
 export async function sendPrivateReplyToComment(input: PrivateReplyInput): Promise<FacebookMessageResult> {
   const env = getServerEnv();
 
+  void input;
+
   if (!env.ENABLE_FACEBOOK_SEND_MESSAGE) {
     return {
       success: true,
@@ -49,37 +51,15 @@ export async function sendPrivateReplyToComment(input: PrivateReplyInput): Promi
     };
   }
 
-  if (!input.pageAccessToken) {
-    return {
-      success: false,
-      status: "failed",
-      errorMessage: "Missing Facebook page access token"
-    };
-  }
+  return {
+    success: true,
+    status: "skipped",
+    errorMessage: "Private reply disabled in current production flow"
+  };
+}
 
-  try {
-    const rawResponse = await fetchFacebookApi<{ id?: string }>(
-      `https://graph.facebook.com/${env.FACEBOOK_GRAPH_API_VERSION}/${input.commentId}/private_replies`,
-      new URLSearchParams({
-        message: input.commentMessage,
-        access_token: input.pageAccessToken
-      })
-    );
-
-    return {
-      success: true,
-      status: "success",
-      rawResponse
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Facebook private reply failed";
-    return {
-      success: false,
-      status: "failed",
-      errorMessage: message,
-      rawResponse: null
-    };
-  }
+function isPermissionError(message: string) {
+  return /permission|not authorized|not allowed|review|capabilit|unsupported post request/i.test(message);
 }
 
 export async function sendPublicReplyToComment(input: PublicReplyInput): Promise<FacebookMessageResult> {
@@ -127,7 +107,7 @@ export async function sendPublicReplyToComment(input: PublicReplyInput): Promise
     const message = error instanceof Error ? error.message : "Facebook public reply failed";
     return {
       success: false,
-      status: "failed",
+      status: isPermissionError(message) ? "failed_permission" : "failed",
       errorMessage: message,
       rawResponse: null
     };

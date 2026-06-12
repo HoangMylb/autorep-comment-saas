@@ -76,13 +76,7 @@ export function getFacebookLoginUrl(userId: string) {
     redirect_uri: redirectUri,
     state,
     response_type: "code",
-    scope: [
-      "pages_show_list",
-      "pages_read_engagement",
-      "pages_manage_metadata",
-      "pages_messaging",
-      "pages_manage_engagement"
-    ].join(",")
+    scope:["public_profile", "email"].join(",")
   });
 
   return {

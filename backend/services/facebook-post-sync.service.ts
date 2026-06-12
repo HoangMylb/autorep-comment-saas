@@ -240,3 +240,58 @@ export async function subscribeFacebookPageWebhook(userId: string, facebookPageR
     throw new Error(message);
   }
 }
+
+export async function getFacebookPageWebhookStatus(userId: string, facebookPageRecordId: string) {
+  const page = await getPageById(facebookPageRecordId, userId);
+
+  if (!page) {
+    throw new Error("Facebook page not found");
+  }
+
+  if (page.connection_type !== "facebook") {
+    throw new Error("Webhook status is only available for real Facebook pages");
+  }
+
+  if (!page.page_access_token) {
+    throw new Error("Missing Facebook page access token");
+  }
+
+  const env = getServerEnv();
+
+  const response = await fetch(
+    `https://graph.facebook.com/v25.0/${page.page_id}/subscribed_apps?access_token=${encodeURIComponent(page.page_access_token)}`,
+    {
+      method: "GET",
+      cache: "no-store"
+    }
+  );
+
+  const result = (await response.json()) as {
+    data?: Array<Record<string, unknown>>;
+    error?: { message?: string };
+  };
+
+  if (!response.ok || result.error) {
+    const message = result.error?.message || "Failed to fetch Facebook page webhook status";
+    await updateFacebookPageStatus(page.id, userId, {
+      error_message: message
+    });
+    throw new Error(message);
+  }
+
+  const subscribedApps = result.data ?? [];
+  const currentApp = subscribedApps.find((app) => String(app.id ?? "") === String(env.FACEBOOK_APP_ID ?? ""));
+  const subscribedFields = Array.isArray(currentApp?.subscribed_fields)
+    ? (currentApp?.subscribed_fields as unknown[])
+    : [];
+  const category = typeof currentApp?.category === "string" ? currentApp.category : null;
+  const hasFeedField = subscribedFields.some((field) => String(field) === "feed") || category === "feed";
+
+  return {
+    facebookPageId: page.page_id,
+    appId: env.FACEBOOK_APP_ID ?? null,
+    subscribedApps,
+    isCurrentAppSubscribed: Boolean(currentApp),
+    hasFeedField
+  };
+}

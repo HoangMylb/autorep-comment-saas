@@ -5,6 +5,7 @@ import { EmptyState } from "@/frontend/components/common/empty-state";
 import { PageShell } from "@/frontend/components/common/page-shell";
 import { StatusBadge } from "@/frontend/features/dashboard/components/status-badge";
 import { ConnectFacebookButton } from "@/frontend/features/dashboard/components/connect-facebook-button";
+import { CheckFacebookWebhookButton } from "@/frontend/features/dashboard/components/check-facebook-webhook-button";
 import { DisconnectFacebookPageButton } from "@/frontend/features/dashboard/components/disconnect-facebook-page-button";
 import { SetupDemoButton } from "@/frontend/features/dashboard/components/setup-demo-button";
 import { SubscribeFacebookWebhookButton } from "@/frontend/features/dashboard/components/subscribe-facebook-webhook-button";
@@ -42,6 +43,7 @@ export default async function FacebookPagesPage() {
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Button href={`/dashboard/posts?pageId=${page.id}`}>View Posts</Button>
                 {(page.connection_type ?? (page.is_mock ? "mock" : "facebook")) === "facebook" ? <SyncFacebookPostsButton pageId={page.id} /> : null}
+                {(page.connection_type ?? (page.is_mock ? "mock" : "facebook")) === "facebook" ? <CheckFacebookWebhookButton pageId={page.id} /> : null}
                 {(page.connection_type ?? (page.is_mock ? "mock" : "facebook")) === "facebook" && !page.webhook_subscribed ? <SubscribeFacebookWebhookButton pageId={page.id} /> : null}
                 {page.webhook_subscribed ? <StatusBadge status="Webhook subscribed" /> : null}
                 {(page.connection_type ?? (page.is_mock ? "mock" : "facebook")) === "facebook" ? <DisconnectFacebookPageButton pageId={page.id} /> : null}

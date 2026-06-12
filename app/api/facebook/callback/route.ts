@@ -16,12 +16,16 @@ export async function GET(request: Request) {
 
   if (error) {
     const message = errorDescription || errorReason || error;
-    await logFacebookSystemEvent({
-      level: "warning",
-      source: "facebook_oauth",
-      message: "Facebook OAuth permission denied or failed",
-      metadata: { error, errorReason, errorDescription }
-    });
+    try {
+      await logFacebookSystemEvent({
+        level: "warning",
+        source: "facebook_oauth",
+        message: "Facebook OAuth permission denied or failed",
+        metadata: { error, errorReason, errorDescription }
+      });
+    } catch (logError) {
+      console.error("[system-log] failed", logError);
+    }
     redirectUrl.searchParams.set("error", message);
     return NextResponse.redirect(redirectUrl);
   }
@@ -35,13 +39,18 @@ export async function GET(request: Request) {
     const result = await handleFacebookCallback(code, state);
     return NextResponse.redirect(new URL(result.redirectTo, redirectUrl.origin));
   } catch (callbackError) {
-    const message = callbackError instanceof Error ? callbackError.message : "Unexpected error";
-    await logFacebookSystemEvent({
-      level: "error",
-      source: "facebook_oauth",
-      message: "Facebook OAuth callback failed",
-      metadata: { error: message }
-    });
+    const message = callbackError instanceof Error ? callbackError.message : "Unknown error";
+    console.error("[facebook-callback] failed", callbackError);
+    try {
+      await logFacebookSystemEvent({
+        level: "error",
+        source: "facebook_oauth",
+        message: "Facebook OAuth callback failed",
+        metadata: { error: message }
+      });
+    } catch (logError) {
+      console.error("[system-log] failed", logError);
+    }
     redirectUrl.searchParams.set("error", message);
     return NextResponse.redirect(redirectUrl);
   }

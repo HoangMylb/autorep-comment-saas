@@ -119,7 +119,7 @@ export async function getLongLivedUserAccessToken(shortLivedToken: string) {
 export async function fetchUserPages(userAccessToken: string) {
   const env = requireFacebookConfig();
   const params = new URLSearchParams({
-    fields: "id,name,access_token,picture{url},perms",
+    fields: "id,name,access_token",
     access_token: userAccessToken
   });
 

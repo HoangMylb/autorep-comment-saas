@@ -172,18 +172,37 @@ export async function subscribeFacebookPageWebhook(userId: string, facebookPageR
   const env = getServerEnv();
 
   try {
-    const response = await fetch(
+    const params = new URLSearchParams();
+    params.append("access_token", page.page_access_token);
+    params.append("subscribed_fields", "feed");
+
+    const response = await fetch(`https://graph.facebook.com/v25.0/${page.page_id}/subscribed_apps`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: params.toString(),
+      cache: "no-store"
+    });
+
+    const result = (await response.json()) as { success?: boolean; error?: { message?: string } };
+
+    if (!response.ok || result.error) {
+      throw new Error(result.error?.message || "Failed to subscribe Facebook page webhook");
+    }
+
+    const verifyResponse = await fetch(
       `https://graph.facebook.com/v25.0/${page.page_id}/subscribed_apps?access_token=${encodeURIComponent(page.page_access_token)}`,
       {
-        method: "POST",
+        method: "GET",
         cache: "no-store"
       }
     );
 
-    const data = (await response.json()) as { success?: boolean; error?: { message?: string } };
+    const verifyResult = (await verifyResponse.json()) as { data?: Array<Record<string, unknown>>; error?: { message?: string } };
 
-    if (!response.ok || data.error || data.success !== true) {
-      throw new Error(data.error?.message || "Failed to subscribe Facebook page webhook");
+    if (!verifyResponse.ok || verifyResult.error) {
+      throw new Error(verifyResult.error?.message || "Failed to verify Facebook page webhook subscription");
     }
 
     const updatedPage = await markFacebookPageWebhookSubscribed(page.id, userId);
@@ -218,6 +237,6 @@ export async function subscribeFacebookPageWebhook(userId: string, facebookPageR
         graphApiVersion: env.FACEBOOK_GRAPH_API_VERSION
       }
     });
-    throw error;
+    throw new Error(message);
   }
 }

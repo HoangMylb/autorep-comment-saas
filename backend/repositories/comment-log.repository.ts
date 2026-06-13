@@ -10,7 +10,7 @@ export async function getLogsByUser(userId: string, filters: LogFilters) {
   const supabase = createAdminClient();
   let query = supabase
     .from("comment_logs")
-    .select("*, automations(name), facebook_pages(page_name), facebook_posts(message)")
+    .select("id, user_id, automation_id, facebook_page_id, facebook_post_id, comment_id, commenter_id, commenter_name, comment_message, matched_keyword, inbox_status, public_reply_status, source, event_type, processing_status, error_message, created_at, automations(name), facebook_pages(page_name), facebook_posts(message)")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
@@ -28,6 +28,44 @@ export async function createLog(input: Record<string, unknown>) {
   const { data, error } = await supabase.from("comment_logs").insert(input).select("*").single();
   if (error) throw error;
   return data;
+}
+
+export async function deleteLogsByPage(pageRecordId: string, userId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("comment_logs")
+    .delete()
+    .eq("facebook_page_id", pageRecordId)
+    .eq("user_id", userId)
+    .select("id");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function deleteLogsByAutomationIds(automationIds: string[], userId: string) {
+  if (automationIds.length === 0) return [];
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("comment_logs")
+    .delete()
+    .eq("user_id", userId)
+    .in("automation_id", automationIds)
+    .select("id");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function deleteLogsByPostIds(postIds: string[], userId: string) {
+  if (postIds.length === 0) return [];
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("comment_logs")
+    .delete()
+    .eq("user_id", userId)
+    .in("facebook_post_id", postIds)
+    .select("id");
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function getAllLogsForAdmin(filters: LogFilters) {

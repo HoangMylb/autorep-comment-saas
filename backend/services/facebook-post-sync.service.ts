@@ -1,8 +1,9 @@
 import { getServerEnv } from "@/backend/lib/env";
 import { logFacebookSystemEvent, maskSensitiveToken } from "@/backend/lib/facebook-log";
-import { disconnectFacebookPage, getPageById, markFacebookPageWebhookSubscribed, updateFacebookPageStatus } from "@/backend/repositories/facebook-page.repository";
-import { upsertFacebookPosts } from "@/backend/repositories/facebook-post.repository";
-import { deactivateAutomationsByPage } from "@/backend/repositories/automation.repository";
+import { deleteFacebookPage, getPageById, markFacebookPageWebhookSubscribed, updateFacebookPageStatus } from "@/backend/repositories/facebook-page.repository";
+import { deletePostsByPage, getPostsByPageIds, markPostsMissingFromSyncAsStale, upsertFacebookPosts } from "@/backend/repositories/facebook-post.repository";
+import { deleteAutomationsByPage, getAutomationsByPageIds } from "@/backend/repositories/automation.repository";
+import { deleteLogsByAutomationIds, deleteLogsByPage, deleteLogsByPostIds } from "@/backend/repositories/comment-log.repository";
 
 interface FacebookGraphPostsResponse {
   data?: Array<{
@@ -61,9 +62,15 @@ export async function syncPagePosts(userId: string, facebookPageRecordId: string
         message: post.message ?? null,
         image_url: post.full_picture ?? post.picture ?? null,
         permalink_url: post.permalink_url ?? null,
+        facebook_created_time: post.created_time ?? null,
         created_time: post.created_time ?? null,
         raw_payload: post
       }))
+    );
+    const stalePosts = await markPostsMissingFromSyncAsStale(
+      userId,
+      page.id,
+      graphPosts.map((post) => post.id)
     );
 
     const syncedPage = await updateFacebookPageStatus(page.id, userId, {
@@ -80,6 +87,7 @@ export async function syncPagePosts(userId: string, facebookPageRecordId: string
         userId,
         pageId: page.page_id,
         savedPostCount: savedPosts.length,
+        stalePostCount: stalePosts.length,
         token: maskSensitiveToken(page.page_access_token)
       }
     });
@@ -87,6 +95,7 @@ export async function syncPagePosts(userId: string, facebookPageRecordId: string
     return {
       page: syncedPage,
       count: savedPosts.length,
+      staleCount: stalePosts.length,
       posts: savedPosts
     };
   } catch (error) {
@@ -131,27 +140,51 @@ export async function getFacebookPageStatus(userId: string, facebookPageRecordId
   };
 }
 
-export async function disconnectFacebookPageAndDisableAutomations(userId: string, facebookPageRecordId: string) {
+export async function disconnectFacebookPageAndDeleteLocalData(userId: string, facebookPageRecordId: string) {
   const page = await getPageById(facebookPageRecordId, userId);
   if (!page) {
     throw new Error("Facebook page not found");
   }
 
-  const disconnectedPage = await disconnectFacebookPage(page.id, userId);
-  const deactivatedAutomations = await deactivateAutomationsByPage(userId, page.id);
+  const relatedAutomations = await getAutomationsByPageIds(page.id, userId);
+  const relatedPosts = await getPostsByPageIds(page.id, userId);
+
+  const deletedLogsDirect = await deleteLogsByPage(page.id, userId);
+  const deletedLogsByAutomations = await deleteLogsByAutomationIds(relatedAutomations.map((item) => item.id), userId);
+  const deletedLogsByPosts = await deleteLogsByPostIds(relatedPosts.map((item) => item.id), userId);
+  const deletedAutomations = await deleteAutomationsByPage(page.id, userId);
+  const deletedPosts = await deletePostsByPage(page.id, userId);
+  const deletedPage = await deleteFacebookPage(page.id, userId);
+
+  const deletedLogIds = new Set([
+    ...deletedLogsDirect.map((item) => item.id),
+    ...deletedLogsByAutomations.map((item) => item.id),
+    ...deletedLogsByPosts.map((item) => item.id)
+  ]);
+
+  const deleted = {
+    page: deletedPage.length,
+    posts: deletedPosts.length,
+    automations: deletedAutomations.length,
+    logs: deletedLogIds.size
+  };
 
   await logFacebookSystemEvent({
     level: "info",
-    source: "facebook_api",
-    message: "Facebook page disconnected",
+    source: "facebook_page_disconnect",
+    message: "Disconnected and deleted local page data",
     metadata: {
       userId,
-      pageId: page.page_id,
-      deactivatedAutomationCount: deactivatedAutomations.length
+      pageDbId: page.id,
+      facebookPageId: page.page_id,
+      deleted
     }
   });
 
-  return disconnectedPage;
+  return {
+    success: true,
+    deleted
+  };
 }
 
 export async function subscribeFacebookPageWebhook(userId: string, facebookPageRecordId: string) {

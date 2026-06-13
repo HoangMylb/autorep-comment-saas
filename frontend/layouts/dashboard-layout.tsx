@@ -2,6 +2,7 @@
 
 import { Button, Layout, Menu } from "antd";
 import type { MenuProps } from "antd";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Logo } from "@/frontend/components/common/logo";
@@ -24,7 +25,11 @@ export function DashboardLayout({
 
   const menuItems: MenuProps["items"] = items.map((item) => ({
     key: item.href,
-    label: item.label
+    label: (
+      <Link href={item.href} prefetch onMouseEnter={() => router.prefetch(item.href)}>
+        {item.label}
+      </Link>
+    )
   }));
 
   const logout = async () => {
@@ -50,7 +55,6 @@ export function DashboardLayout({
           selectedKeys={[pathname]}
           items={menuItems}
           className="mt-6 border-none"
-          onClick={({ key }) => router.push(key)}
         />
       </Sider>
       <Layout>

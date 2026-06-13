@@ -1,14 +1,14 @@
 import { getProfileById } from "@/backend/repositories/profile-repository";
 import { getAutomationsByUser } from "@/backend/repositories/automation.repository";
-import { getLogsByUser } from "@/backend/repositories/comment-log.repository";
 import { getPagesByUser } from "@/backend/repositories/facebook-page.repository";
+import { getUserLogs } from "@/backend/services/mock-facebook.service";
 
 export async function getDashboardOverview(userId: string) {
   const [profile, pages, automations, logs] = await Promise.all([
     getProfileById(userId),
     getPagesByUser(userId),
     getAutomationsByUser(userId),
-    getLogsByUser(userId, {})
+    getUserLogs(userId, {})
   ]);
 
   return {

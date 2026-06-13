@@ -55,15 +55,18 @@ export interface FacebookPost {
   facebook_page_id: string;
   post_id: string;
   message: string | null;
-  image_url: string | null;
-  permalink_url: string | null;
-  created_time: string | null;
+  image_url?: string | null;
+  permalink_url?: string | null;
+  created_time?: string | null;
   connection_type?: ConnectionType;
   raw_payload?: Record<string, unknown> | null;
   is_mock: boolean;
+   is_stale?: boolean;
+   last_seen_at?: string | null;
+   facebook_created_time?: string | null;
   created_at: string;
   updated_at: string;
-  facebook_pages?: { page_name?: string };
+  facebook_pages?: { page_name?: string } | null;
 }
 
 export interface Automation {
@@ -76,10 +79,11 @@ export interface Automation {
   inbox_message: string;
   public_reply_message: string | null;
   is_active: boolean;
+  is_stale?: boolean;
   created_at: string;
   updated_at: string;
-  facebook_pages?: { page_name?: string };
-  facebook_posts?: { message?: string | null; post_id?: string };
+  facebook_pages?: { page_name?: string | null; status?: string | null } | null;
+  facebook_posts?: { message?: string | null; post_id?: string | null; is_stale?: boolean | null } | null;
   profiles?: { email?: string; full_name?: string | null };
 }
 
@@ -100,11 +104,11 @@ export interface CommentLog {
   event_type?: string | null;
   processing_status?: ProcessingStatus;
   error_message: string | null;
-  raw_payload: Record<string, unknown> | null;
+  raw_payload?: Record<string, unknown> | null;
   created_at: string;
-  automations?: { name?: string };
-  facebook_pages?: { page_name?: string };
-  facebook_posts?: { message?: string | null };
+  automations?: { name?: string } | null;
+  facebook_pages?: { page_name?: string } | null;
+  facebook_posts?: { message?: string | null } | null;
   profiles?: { email?: string; full_name?: string | null };
 }
 

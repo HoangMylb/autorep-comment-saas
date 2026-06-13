@@ -18,6 +18,8 @@ export function StatusBadge({ status }: { status: string }) {
                 ? "gold"
                 : status === "active"
                   ? "green"
+                  : status === "stale" || status === "stale automation"
+                    ? "volcano"
                   : status === "inactive" || status === "disconnected"
                     ? "default"
                     : "default";

@@ -2,15 +2,18 @@
 
 import { Button, Modal, Space, Switch, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { Automation } from "@/frontend/types/domain";
 import { apiClient } from "@/frontend/lib/api-client";
 import { formatDate } from "@/frontend/lib/utils";
 import { SendTestCommentModal } from "@/frontend/features/dashboard/components/send-test-comment-modal";
+import { StatusBadge } from "@/frontend/features/dashboard/components/status-badge";
 
 export function AutomationsTable({ automations }: { automations: Automation[] }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleDelete = (automation: Automation) => {
     Modal.confirm({
@@ -21,6 +24,10 @@ export function AutomationsTable({ automations }: { automations: Automation[] })
       onOk: async () => {
         try {
           await apiClient.delete(`/automations/${automation.id}`);
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["automations"] }),
+            queryClient.invalidateQueries({ queryKey: ["comment-logs"] })
+          ]);
           toast.success("Automation deleted");
           router.refresh();
         } catch (error) {
@@ -31,8 +38,17 @@ export function AutomationsTable({ automations }: { automations: Automation[] })
   };
 
   const handleToggle = async (automation: Automation) => {
+    if (automation.is_stale) {
+      toast.error("Cannot activate stale automation. Reconnect the page or re-sync posts first.");
+      return;
+    }
+
     try {
       await apiClient.patch(`/automations/${automation.id}/toggle`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["automations"] }),
+        queryClient.invalidateQueries({ queryKey: ["comment-logs"] })
+      ]);
       toast.success("Automation updated");
       router.refresh();
     } catch (error) {
@@ -42,10 +58,30 @@ export function AutomationsTable({ automations }: { automations: Automation[] })
 
   const columns: ColumnsType<Automation> = [
     { title: "Name", dataIndex: "name", key: "name" },
-    { title: "Page", dataIndex: ["facebook_pages", "page_name"], key: "page" },
-    { title: "Post", dataIndex: ["facebook_posts", "message"], key: "post", render: (value: string | null) => value ?? "-" },
+    {
+      title: "Page",
+      dataIndex: ["facebook_pages", "page_name"],
+      key: "page",
+      render: (value: string | null | undefined, record: Automation) => (
+        <div className="space-y-1">
+          <div>{value ?? "Missing page"}</div>
+          {record.is_stale ? <StatusBadge status="stale automation" /> : null}
+        </div>
+      )
+    },
+    {
+      title: "Post",
+      dataIndex: ["facebook_posts", "message"],
+      key: "post",
+      render: (value: string | null, record: Automation) => (
+        <div className="space-y-1">
+          <div>{value ?? "Missing post"}</div>
+          <div className="text-xs text-slate-500">Post ID: {record.facebook_posts?.post_id ?? "-"}</div>
+        </div>
+      )
+    },
     { title: "Keywords", dataIndex: "keywords", key: "keywords", render: (value: string[]) => <div className="flex flex-wrap gap-2">{value.map((item) => <Tag key={item}>{item}</Tag>)}</div> },
-    { title: "Active", dataIndex: "is_active", key: "is_active", render: (_value: boolean, record) => <Switch checked={record.is_active} onChange={() => handleToggle(record)} /> },
+    { title: "Active", dataIndex: "is_active", key: "is_active", render: (_value: boolean, record) => <Switch checked={record.is_active} onChange={() => handleToggle(record)} disabled={record.is_stale} /> },
     { title: "Created", dataIndex: "created_at", key: "created_at", render: (value: string) => formatDate(value) },
     {
       title: "Actions",

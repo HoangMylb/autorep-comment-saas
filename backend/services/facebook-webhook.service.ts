@@ -272,7 +272,7 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
       automationId: null,
       matchedKeyword: null,
       processingStatus: "skipped",
-      errorMessage: "No active automation found for matched post",
+      errorMessage: "No automation configured for this Facebook post",
       rawPayload: {
         ...event.rawPayload,
         webhookPostId: event.postId,
@@ -281,7 +281,7 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
         activeAutomationsForPage: activeAutomationsForPageMetadata
       }
     });
-    return { processed: false, reason: "No active automation found for matched post" };
+    return { processed: false, reason: "No automation configured for this Facebook post" };
   }
 
   const matchedAutomation = automations.find((automation) => matchKeyword(event.commentMessage, automation.keywords));

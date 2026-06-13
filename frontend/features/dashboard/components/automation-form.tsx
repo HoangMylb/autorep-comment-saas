@@ -44,7 +44,7 @@ export function AutomationForm({ pages, posts, initialValue }: { pages: Facebook
 
   const selectedPageId = watch("facebook_page_id");
   const selectedPostId = watch("facebook_post_id");
-  const availablePosts = posts.filter((post) => post.facebook_page_id === selectedPageId);
+  const availablePosts = posts.filter((post) => post.facebook_page_id === selectedPageId && !post.is_stale);
   const previewPost = posts.find((post) => post.id === selectedPostId);
   const previewKeywords = watch("keywords");
   const inboxMessage = watch("inbox_message");
@@ -52,6 +52,11 @@ export function AutomationForm({ pages, posts, initialValue }: { pages: Facebook
 
   const onSubmit = async (values: FormValues) => {
     try {
+      if (values.is_active && previewPost?.is_stale) {
+        toast.error("Cannot activate automation for a stale or missing Facebook post");
+        return;
+      }
+
       if (initialValue) {
         await apiClient.put(`/automations/${initialValue.id}`, values);
         toast.success("Automation updated");
@@ -73,7 +78,7 @@ export function AutomationForm({ pages, posts, initialValue }: { pages: Facebook
             <Controller name="facebook_page_id" control={control} render={({ field }) => <Select {...field} onChange={field.onChange} options={pages.map((page) => ({ label: page.page_name, value: page.id }))} />} />
           </Form.Item>
           <Form.Item label="Post" validateStatus={errors.facebook_post_id ? "error" : ""} help={errors.facebook_post_id?.message}>
-            <Controller name="facebook_post_id" control={control} render={({ field }) => <Select {...field} onChange={field.onChange} options={availablePosts.map((post) => ({ label: post.message ?? post.post_id, value: post.id }))} />} />
+            <Controller name="facebook_post_id" control={control} render={({ field }) => <Select {...field} onChange={field.onChange} options={availablePosts.map((post) => ({ label: `${post.message ?? post.post_id}${post.is_stale ? " (stale)" : ""}`, value: post.id }))} />} />
           </Form.Item>
           <Form.Item label="Automation name" validateStatus={errors.name ? "error" : ""} help={errors.name?.message}>
             <Controller name="name" control={control} render={({ field }) => <Input {...field} />} />
@@ -114,6 +119,7 @@ export function AutomationForm({ pages, posts, initialValue }: { pages: Facebook
           <div className="rounded-3xl bg-slate-50 p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Selected post</p>
             <p className="mt-2 text-sm text-slate-700">{previewPost?.message ?? "Select a post"}</p>
+            <p className="mt-2 text-xs text-slate-500">Facebook Post ID: {previewPost?.post_id ?? "-"}</p>
           </div>
         </div>
       </Card>

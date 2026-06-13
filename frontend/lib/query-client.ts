@@ -7,7 +7,9 @@ export function makeQueryClient() {
     defaultOptions: {
       queries: {
         staleTime: 30_000,
-        refetchOnWindowFocus: false
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
+        retry: 1
       }
     }
   });

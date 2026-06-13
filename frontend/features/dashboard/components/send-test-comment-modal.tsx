@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Form, Input, Modal } from "antd";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { apiClient } from "@/frontend/lib/api-client";
@@ -12,6 +13,7 @@ export function SendTestCommentModal({ facebookPostId, buttonLabel = "Send test 
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm<{ commenter_name: string; comment_message: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async () => {
     try {
@@ -23,6 +25,7 @@ export function SendTestCommentModal({ facebookPostId, buttonLabel = "Send test 
       });
       const matchedKeyword = response.data.data.matchedKeyword;
       toast.success(matchedKeyword ? `Matched keyword: ${matchedKeyword}` : "No keyword matched");
+      await queryClient.invalidateQueries({ queryKey: ["comment-logs"] });
       setOpen(false);
       form.resetFields();
       router.refresh();

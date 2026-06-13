@@ -8,7 +8,7 @@ import { SetupDemoButton } from "@/frontend/features/dashboard/components/setup-
 export default async function CreateAutomationPage() {
   const user = await requireUser();
   const pages = await getUserPages(user.id);
-  const posts = pages.length ? (await Promise.all(pages.map((page) => getUserPosts(user.id, page.id)))).flat() : [];
+  const posts = pages.length ? (await Promise.all(pages.map((page) => getUserPosts(user.id, page.id)))).flat().filter((post) => !post.is_stale) : [];
 
   return (
     <PageShell title="Create Automation" description="Select a demo page and post, then define keywords and response content.">

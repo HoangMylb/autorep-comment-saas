@@ -114,6 +114,18 @@ export async function disconnectFacebookPage(pageRecordId: string, userId: strin
   });
 }
 
+export async function deleteFacebookPage(pageRecordId: string, userId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("facebook_pages")
+    .delete()
+    .eq("id", pageRecordId)
+    .eq("user_id", userId)
+    .select("id");
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function markFacebookPageWebhookSubscribed(pageRecordId: string, userId: string) {
   return updateFacebookPageStatus(pageRecordId, userId, {
     webhook_subscribed: true,

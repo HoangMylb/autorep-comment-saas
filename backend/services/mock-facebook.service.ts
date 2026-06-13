@@ -1,9 +1,10 @@
 import { randomUUID } from "crypto";
-import { createAutomation, deleteAutomation, findActiveAutomationsByPost, getAllAutomationsForAdmin, getAutomationById, getAutomationsByUser, toggleAutomation, updateAutomation } from "@/backend/repositories/automation.repository";
+import { createAutomation, deleteAutomation, findActiveAutomationsByPost, getAllAutomationsForAdmin, getAutomationById, getAutomationsByUser, toggleAutomation, updateAutomation, type AutomationRecord } from "@/backend/repositories/automation.repository";
 import { createLog, getAllLogsForAdmin, getLogsByUser } from "@/backend/repositories/comment-log.repository";
 import { createDemoPage, getAllPagesForAdmin, getPageById, getPagesByUser } from "@/backend/repositories/facebook-page.repository";
 import { createDemoPosts, getAllPostsForAdmin, getPostById, getPostsByPage } from "@/backend/repositories/facebook-post.repository";
 import { automationInputSchema, logFiltersSchema, sendTestCommentSchema } from "@/backend/validators/automation-validator";
+import type { CommentLog } from "@/frontend/types/domain";
 
 function stripVietnamese(input: string) {
   return input
@@ -17,6 +18,25 @@ function normalizeForMatch(input: string) {
   return stripVietnamese(input).toLowerCase().trim().replace(/\s+/g, " ");
 }
 
+function unwrapRelation<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+type NormalizedCommentLog = CommentLog & {
+  automations: { name?: string } | null;
+  facebook_pages: { page_name?: string } | null;
+  facebook_posts: { message?: string | null } | null;
+};
+
+function normalizeCommentLog(log: Record<string, unknown>): NormalizedCommentLog {
+  return {
+    ...log,
+    automations: unwrapRelation(log.automations as { name?: string } | { name?: string }[] | null | undefined),
+    facebook_pages: unwrapRelation(log.facebook_pages as { page_name?: string } | { page_name?: string }[] | null | undefined),
+    facebook_posts: unwrapRelation(log.facebook_posts as { message?: string | null } | { message?: string | null }[] | null | undefined)
+  } as NormalizedCommentLog;
+}
+
 export function matchKeyword(commentMessage: string, keywords: string[]) {
   const normalizedComment = normalizeForMatch(commentMessage);
   for (const keyword of keywords) {
@@ -26,6 +46,15 @@ export function matchKeyword(commentMessage: string, keywords: string[]) {
     }
   }
   return null;
+}
+
+function isAutomationStale(automation: AutomationRecord) {
+  const pageMissing = !automation.facebook_pages;
+  const postMissing = !automation.facebook_posts;
+  const pageDisconnected = automation.facebook_pages?.status === "disconnected";
+  const postStale = automation.facebook_posts?.is_stale === true;
+
+  return pageMissing || postMissing || pageDisconnected || postStale;
 }
 
 export async function createDemoPageWithPosts(userId: string) {
@@ -41,7 +70,11 @@ export async function getUserPages(userId: string) {
 export async function getUserPosts(userId: string, pageId: string) {
   const page = await getPageById(pageId, userId);
   if (!page) throw new Error("Page not found");
-  return getPostsByPage(userId, pageId);
+  const posts = await getPostsByPage(userId, pageId);
+  return posts.map((post) => ({
+    ...post,
+    facebook_pages: unwrapRelation(post.facebook_pages)
+  }));
 }
 
 export async function createAutomationRecord(userId: string, input: unknown) {
@@ -56,7 +89,13 @@ export async function getAutomationRecord(userId: string, id: string) {
 }
 
 export async function getUserAutomations(userId: string) {
-  return getAutomationsByUser(userId);
+  const automations = await getAutomationsByUser(userId);
+  return automations.map((automation) => ({
+    ...automation,
+    facebook_pages: unwrapRelation(automation.facebook_pages),
+    facebook_posts: unwrapRelation(automation.facebook_posts),
+    is_stale: isAutomationStale(automation)
+  }));
 }
 
 export async function updateAutomationRecord(userId: string, id: string, input: unknown) {
@@ -71,7 +110,10 @@ export async function deleteAutomationRecord(userId: string, id: string) {
 }
 
 export async function toggleAutomationRecord(userId: string, id: string) {
-  await getAutomationRecord(userId, id);
+  const automation = await getAutomationRecord(userId, id);
+  if (automation && isAutomationStale(automation)) {
+    throw new Error("Cannot activate automation with missing or stale page/post");
+  }
   return toggleAutomation(id, userId);
 }
 
@@ -147,7 +189,8 @@ export async function sendTestComment(userId: string, input: unknown) {
 
 export async function getUserLogs(userId: string, filters: unknown) {
   const validated = logFiltersSchema.parse(filters);
-  return getLogsByUser(userId, validated);
+  const logs = await getLogsByUser(userId, validated);
+  return logs.map((log) => normalizeCommentLog(log));
 }
 
 export async function getAdminPages() {
@@ -160,7 +203,8 @@ export async function getAdminAutomations() {
 
 export async function getAdminLogs(filters: unknown) {
   const validated = logFiltersSchema.parse(filters);
-  return getAllLogsForAdmin(validated);
+  const logs = await getAllLogsForAdmin(validated);
+  return logs.map((log) => normalizeCommentLog(log));
 }
 
 export async function getAdminPosts() {

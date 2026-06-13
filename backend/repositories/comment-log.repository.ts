@@ -4,6 +4,11 @@ interface LogFilters {
   status?: "success" | "failed" | "skipped";
   keyword?: string;
   automation?: string;
+  page?: string;
+  post?: string;
+  source?: string;
+  processing?: string;
+  limit?: number;
 }
 
 export async function getLogsByUser(userId: string, filters: LogFilters) {
@@ -15,8 +20,13 @@ export async function getLogsByUser(userId: string, filters: LogFilters) {
     .order("created_at", { ascending: false });
 
   if (filters.automation) query = query.eq("automation_id", filters.automation);
+  if (filters.page) query = query.eq("facebook_page_id", filters.page);
+  if (filters.post) query = query.eq("facebook_post_id", filters.post);
+  if (filters.source) query = query.eq("source", filters.source);
+  if (filters.processing) query = query.eq("processing_status", filters.processing);
   if (filters.keyword) query = query.ilike("matched_keyword", `%${filters.keyword}%`);
   if (filters.status) query = query.or(`inbox_status.eq.${filters.status},public_reply_status.eq.${filters.status}`);
+  query = query.limit(filters.limit ?? 50);
 
   const { data, error } = await query;
   if (error) throw error;

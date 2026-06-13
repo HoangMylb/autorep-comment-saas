@@ -29,5 +29,10 @@ export const sendTestCommentSchema = z.object({
 export const logFiltersSchema = z.object({
   status: z.enum(["success", "failed", "skipped"]).optional(),
   keyword: z.string().trim().optional(),
-  automation: z.string().uuid().optional()
+  automation: z.string().uuid().optional(),
+  page: z.string().uuid().optional(),
+  post: z.string().uuid().optional(),
+  source: z.string().trim().optional(),
+  processing: z.string().trim().optional(),
+  limit: z.coerce.number().int().positive().max(200).optional()
 });

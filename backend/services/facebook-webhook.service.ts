@@ -203,6 +203,7 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
     return {
       id: automation.id,
       name: automation.name,
+      user_id: automation.user_id,
       facebook_page_id: automation.facebook_page_id,
       facebook_post_id: automation.facebook_post_id,
       is_active: automation.is_active,
@@ -231,7 +232,7 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
       normalizedWebhookPostId: automationLookup.normalizedWebhookPostId,
       normalizedMatchedPostId: automationLookup.normalizedMatchedPostId ?? normalizeFacebookObjectId(post.post_id ?? null),
       automationQueryParams: {
-        userId: page.user_id,
+        ownerUserId: page.user_id,
         facebook_page_id: page.id,
         facebook_post_id: post.id,
         is_active: true,
@@ -255,6 +256,7 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
         matchedPageExternalId: page.page_id,
         matchedPostDbId: post.id,
         matchedPostExternalId: post.post_id,
+        activeAutomationsForPageCount: activeAutomationsForPageMetadata.length,
         normalizedWebhookPostId: automationLookup.normalizedWebhookPostId,
         normalizedMatchedPostId: automationLookup.normalizedMatchedPostId ?? normalizeFacebookObjectId(post.post_id ?? null),
         activeAutomationsForPage: activeAutomationsForPageMetadata
@@ -272,16 +274,17 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
       automationId: null,
       matchedKeyword: null,
       processingStatus: "skipped",
-      errorMessage: "No automation configured for this Facebook post",
+      errorMessage: "No automation configured for this post",
       rawPayload: {
         ...event.rawPayload,
         webhookPostId: event.postId,
         matchedPostDbId: post.id,
         matchedPostExternalId: post.post_id,
+        activeAutomationsForPageCount: activeAutomationsForPageMetadata.length,
         activeAutomationsForPage: activeAutomationsForPageMetadata
       }
     });
-    return { processed: false, reason: "No automation configured for this Facebook post" };
+    return { processed: false, reason: "No automation configured for this post" };
   }
 
   const matchedAutomation = automations.find((automation) => matchKeyword(event.commentMessage, automation.keywords));

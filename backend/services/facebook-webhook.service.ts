@@ -1,4 +1,4 @@
-import { findActiveAutomationsByPost } from "@/backend/repositories/automation.repository";
+import { findActiveAutomationsByPage, findActiveAutomationsByPost } from "@/backend/repositories/automation.repository";
 import { createLog, findSuccessfulLogByCommentAndAutomation } from "@/backend/repositories/comment-log.repository";
 import { logFacebookSystemEvent } from "@/backend/lib/facebook-log";
 import { getPageByFacebookPageId } from "@/backend/repositories/facebook-page.repository";
@@ -28,6 +28,12 @@ interface FacebookWebhookPayload {
       value?: Record<string, unknown>;
     }>;
   }>;
+}
+
+function normalizeFacebookObjectId(id?: string | null) {
+  if (!id) return "";
+  const clean = String(id).trim();
+  return clean.includes("_") ? clean.split("_").pop() ?? "" : clean;
 }
 
 function extractString(value: unknown) {
@@ -130,6 +136,46 @@ async function createSkippedLog(input: {
   });
 }
 
+async function findMatchingAutomation(input: {
+  userId: string;
+  pageRecordId: string;
+  postRecordId: string;
+  webhookPostId: string;
+}) {
+  const exactAutomations = await findActiveAutomationsByPost(input.userId, input.postRecordId);
+  if (exactAutomations.length > 0) {
+    return {
+      automations: exactAutomations,
+      activeAutomationsForPage: [] as Array<Record<string, unknown>>,
+      normalizedWebhookPostId: normalizeFacebookObjectId(input.webhookPostId),
+      normalizedMatchedPostId: null,
+      matchedBy: "exact_post_record"
+    };
+  }
+
+  const activeAutomationsForPage = await findActiveAutomationsByPage(input.userId, input.pageRecordId);
+  const normalizedWebhookPostId = normalizeFacebookObjectId(input.webhookPostId);
+
+  const fallbackMatches = activeAutomationsForPage.filter((automation) => {
+    const linkedPost = automation.facebook_posts as { post_id?: string | null } | null | undefined;
+    return normalizeFacebookObjectId(linkedPost?.post_id ?? null) === normalizedWebhookPostId;
+  });
+
+  const normalizedMatchedPostId = fallbackMatches.length > 0
+    ? normalizeFacebookObjectId(
+        ((fallbackMatches[0]?.facebook_posts as { post_id?: string | null } | null | undefined)?.post_id ?? null)
+      )
+    : null;
+
+  return {
+    automations: fallbackMatches,
+    activeAutomationsForPage,
+    normalizedWebhookPostId,
+    normalizedMatchedPostId,
+    matchedBy: fallbackMatches.length > 0 ? "normalized_post_id_fallback" : "none"
+  };
+}
+
 export async function processCommentEvent(event: FacebookCommentEvent) {
   const env = getServerEnv();
   const page = await getPageByFacebookPageId(event.pageId);
@@ -145,9 +191,76 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
   }
 
   const post = await ensureFacebookPostRecord(page.user_id, page.id, event.postId, event.rawPayload);
-  const automations = await findActiveAutomationsByPost(page.user_id, post.id);
+  const automationLookup = await findMatchingAutomation({
+    userId: page.user_id,
+    pageRecordId: page.id,
+    postRecordId: post.id,
+    webhookPostId: event.postId
+  });
+
+  const activeAutomationsForPageMetadata = automationLookup.activeAutomationsForPage.map((automation) => {
+    const linkedPost = automation.facebook_posts as { id?: string; post_id?: string | null; message?: string | null } | null | undefined;
+    return {
+      id: automation.id,
+      name: automation.name,
+      facebook_page_id: automation.facebook_page_id,
+      facebook_post_id: automation.facebook_post_id,
+      is_active: automation.is_active,
+      keywords: automation.keywords,
+      linkedFacebookPost: {
+        id: linkedPost?.id ?? null,
+        post_id: linkedPost?.post_id ?? null,
+        message: linkedPost?.message ?? null
+      }
+    };
+  });
+
+  await logFacebookSystemEvent({
+    level: "info",
+    source: "facebook_webhook_debug",
+    message: "automation lookup debug",
+    metadata: {
+      webhookPageId: event.pageId,
+      webhookPostId: event.postId,
+      webhookCommentId: event.commentId,
+      commentMessage: event.commentMessage,
+      matchedPageDbId: page.id,
+      matchedPageExternalId: page.page_id,
+      matchedPostDbId: post.id,
+      matchedPostExternalId: post.post_id,
+      normalizedWebhookPostId: automationLookup.normalizedWebhookPostId,
+      normalizedMatchedPostId: automationLookup.normalizedMatchedPostId ?? normalizeFacebookObjectId(post.post_id ?? null),
+      automationQueryParams: {
+        userId: page.user_id,
+        facebook_page_id: page.id,
+        facebook_post_id: post.id,
+        is_active: true,
+        matchedBy: automationLookup.matchedBy
+      }
+    }
+  });
+
+  const automations = automationLookup.automations;
 
   if (automations.length === 0) {
+    await logFacebookSystemEvent({
+      level: "warning",
+      source: "facebook_webhook_debug",
+      message: "No active automation found for matched post",
+      metadata: {
+        webhookPageId: event.pageId,
+        webhookPostId: event.postId,
+        webhookCommentId: event.commentId,
+        matchedPageDbId: page.id,
+        matchedPageExternalId: page.page_id,
+        matchedPostDbId: post.id,
+        matchedPostExternalId: post.post_id,
+        normalizedWebhookPostId: automationLookup.normalizedWebhookPostId,
+        normalizedMatchedPostId: automationLookup.normalizedMatchedPostId ?? normalizeFacebookObjectId(post.post_id ?? null),
+        activeAutomationsForPage: activeAutomationsForPageMetadata
+      }
+    });
+
     await createSkippedLog({
       userId: page.user_id,
       pageRecordId: page.id,
@@ -159,10 +272,16 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
       automationId: null,
       matchedKeyword: null,
       processingStatus: "skipped",
-      errorMessage: "No active automation found",
-      rawPayload: event.rawPayload
+      errorMessage: "No active automation found for matched post",
+      rawPayload: {
+        ...event.rawPayload,
+        webhookPostId: event.postId,
+        matchedPostDbId: post.id,
+        matchedPostExternalId: post.post_id,
+        activeAutomationsForPage: activeAutomationsForPageMetadata
+      }
     });
-    return { processed: false, reason: "No active automation found" };
+    return { processed: false, reason: "No active automation found for matched post" };
   }
 
   const matchedAutomation = automations.find((automation) => matchKeyword(event.commentMessage, automation.keywords));

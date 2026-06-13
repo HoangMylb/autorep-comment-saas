@@ -56,6 +56,19 @@ export async function findActiveAutomationsByPost(userId: string, postId: string
   return data ?? [];
 }
 
+export async function findActiveAutomationsByPage(userId: string, pageId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("automations")
+    .select("*, facebook_posts(id, post_id, message)")
+    .eq("user_id", userId)
+    .eq("facebook_page_id", pageId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getAllAutomationsForAdmin() {
   const supabase = createAdminClient();
   const { data, error } = await supabase

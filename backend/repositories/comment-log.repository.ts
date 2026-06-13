@@ -107,3 +107,16 @@ export async function findSuccessfulLogByCommentAndAutomation(commentId: string,
   if (error) throw error;
   return data;
 }
+
+export async function findSuccessfulInboxLogByCommentAndAutomation(commentId: string, automationId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("comment_logs")
+    .select("id")
+    .eq("comment_id", commentId)
+    .eq("automation_id", automationId)
+    .eq("inbox_status", "success")
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}

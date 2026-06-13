@@ -37,7 +37,9 @@ const FACEBOOK_OAUTH_SCOPES = [
   "pages_read_engagement",
   "pages_manage_metadata",
   "pages_manage_engagement",
-  "pages_read_user_content"
+  "pages_read_user_content",
+  "pages_messaging"
+  
 ] as const;
 
 function requireFacebookConfig() {

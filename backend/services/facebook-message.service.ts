@@ -2,15 +2,16 @@ import { getServerEnv } from "@/backend/lib/env";
 
 export interface FacebookMessageResult {
   success: boolean;
-  status: "success" | "failed" | "failed_permission" | "skipped";
+  status: "success" | "failed" | "failed_permission" | "skipped" | "skipped_duplicate";
   errorMessage?: string;
   rawResponse?: unknown;
 }
 
 interface PrivateReplyInput {
+  facebookPageId: string;
   pageAccessToken: string | null;
-  commentId: string;
-  commentMessage: string;
+  facebookCommentId: string;
+  message: string;
 }
 
 interface PublicReplyInput {
@@ -38,28 +39,16 @@ async function fetchFacebookApi<T>(url: string, body: URLSearchParams) {
   return data;
 }
 
-export async function sendPrivateReplyToComment(input: PrivateReplyInput): Promise<FacebookMessageResult> {
-  const env = getServerEnv();
-
-  void input;
-
-  if (!env.ENABLE_FACEBOOK_SEND_MESSAGE) {
-    return {
-      success: true,
-      status: "skipped",
-      errorMessage: "Facebook send message disabled by feature flag"
-    };
-  }
-
-  return {
-    success: true,
-    status: "skipped",
-    errorMessage: "Private reply disabled in current production flow"
-  };
-}
-
 function isPermissionError(message: string) {
   return /permission|not authorized|not allowed|review|capabilit|unsupported post request/i.test(message);
+}
+
+function sanitizeFacebookError(message: string) {
+  if (/pages_messaging/i.test(message)) {
+    return "Missing Meta permission: pages_messaging";
+  }
+
+  return message.length > 180 ? `${message.slice(0, 177)}...` : message;
 }
 
 export async function sendPublicReplyToComment(input: PublicReplyInput): Promise<FacebookMessageResult> {
@@ -108,7 +97,77 @@ export async function sendPublicReplyToComment(input: PublicReplyInput): Promise
     return {
       success: false,
       status: isPermissionError(message) ? "failed_permission" : "failed",
-      errorMessage: message,
+      errorMessage: sanitizeFacebookError(message),
+      rawResponse: null
+    };
+  }
+}
+
+export async function sendPrivateReplyToComment(input: PrivateReplyInput): Promise<FacebookMessageResult> {
+  const env = getServerEnv();
+
+  if (!env.ENABLE_FACEBOOK_SEND_MESSAGE) {
+    return {
+      success: true,
+      status: "skipped",
+      errorMessage: "Private reply disabled by config"
+    };
+  }
+
+  if (!input.message.trim()) {
+    return {
+      success: true,
+      status: "skipped",
+      errorMessage: "No inbox message configured"
+    };
+  }
+
+  if (!input.pageAccessToken) {
+    return {
+      success: false,
+      status: "failed",
+      errorMessage: "Missing Facebook page access token"
+    };
+  }
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v25.0/${input.facebookPageId}/messages?access_token=${encodeURIComponent(input.pageAccessToken)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          recipient: {
+            comment_id: input.facebookCommentId
+          },
+          message: {
+            text: input.message
+          }
+        }),
+        cache: "no-store"
+      }
+    );
+
+    const rawResponse = (await response.json()) as { error?: { message?: string } };
+
+    if (!response.ok || rawResponse.error) {
+      throw new Error(rawResponse.error?.message || `Facebook private reply failed (${response.status})`);
+    }
+
+    return {
+      success: true,
+      status: "success",
+      rawResponse
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Facebook private reply failed";
+    const permissionMissing = /pages_messaging/i.test(message);
+    return {
+      success: false,
+      status: permissionMissing || isPermissionError(message) ? "failed_permission" : "failed",
+      errorMessage: sanitizeFacebookError(message),
       rawResponse: null
     };
   }

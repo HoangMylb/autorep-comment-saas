@@ -16,6 +16,8 @@ export function StatusBadge({ status }: { status: string }) {
               ? "cyan"
               : status === "skipped"
                 ? "gold"
+                : status === "skipped_duplicate"
+                  ? "orange"
                 : status === "active"
                   ? "green"
                   : status === "stale" || status === "stale automation"

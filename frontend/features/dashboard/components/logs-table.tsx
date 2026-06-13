@@ -17,7 +17,11 @@ const columns: ColumnsType<CommentLog> = [
     dataIndex: "inbox_status",
     key: "inbox_status",
     render: (value: string, record: CommentLog) =>
-      value === "skipped" && record.source === "simulated_facebook" ? <Tag color="gold">skipped (test)</Tag> : <StatusBadge status={value} />
+      value === "skipped" && record.source === "simulated_facebook"
+        ? <Tag color="gold">skipped (test)</Tag>
+        : value === "failed_permission"
+          ? <Tag color="red">Missing pages_messaging</Tag>
+          : <StatusBadge status={value} />
   },
   { title: "Public reply", dataIndex: "public_reply_status", key: "public_reply_status", render: (value: string) => <StatusBadge status={value} /> },
   {
@@ -27,6 +31,10 @@ const columns: ColumnsType<CommentLog> = [
     render: (value: string | null) =>
       value === "Missing Facebook permission or App Review not approved"
         ? <span className="text-red-500">Matched keyword, missing Meta permission for reply</span>
+        : value === "Private reply disabled by config"
+          ? <span className="text-amber-600">Private reply disabled by config</span>
+          : value === "Missing Meta permission: pages_messaging"
+            ? <span className="text-red-500">Missing pages_messaging</span>
         : value
           ? <span className="text-red-500">{value}</span>
           : "-"

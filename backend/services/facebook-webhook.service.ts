@@ -1,5 +1,5 @@
 import { findActiveAutomationsByPage, findActiveAutomationsByPost } from "@/backend/repositories/automation.repository";
-import { createLog, findSuccessfulLogByCommentAndAutomation } from "@/backend/repositories/comment-log.repository";
+import { createLog, findSuccessfulInboxLogByCommentAndAutomation, findSuccessfulLogByCommentAndAutomation } from "@/backend/repositories/comment-log.repository";
 import { logFacebookSystemEvent } from "@/backend/lib/facebook-log";
 import { getPageByFacebookPageId } from "@/backend/repositories/facebook-page.repository";
 import { createPlaceholderFacebookPost, getPostByFacebookPostId } from "@/backend/repositories/facebook-post.repository";
@@ -190,6 +190,22 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
     return { processed: false, reason: "Page not found" };
   }
 
+  const isOwnPageComment = event.commenterId === page.page_id || event.commenterName === page.page_name;
+  if (isOwnPageComment) {
+    await logFacebookSystemEvent({
+      level: "info",
+      source: "facebook_webhook",
+      message: "Skipped own page comment",
+      metadata: {
+        comment_id: event.commentId,
+        page_id: page.page_id,
+        from_id: event.commenterId,
+        from_name: event.commenterName
+      }
+    });
+    return { processed: false, reason: "Skipped own page comment" };
+  }
+
   const post = await ensureFacebookPostRecord(page.user_id, page.id, event.postId, event.rawPayload);
   const automationLookup = await findMatchingAutomation({
     userId: page.user_id,
@@ -329,17 +345,25 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
   const matchedKeyword = matchKeyword(event.commentMessage, matchedAutomation.keywords);
   const errorMessages = [] as string[];
   const isSimulatedComment = event.commentId.startsWith("test_") || event.commentId.startsWith("mock_");
+  const hasSuccessfulInboxLog = await findSuccessfulInboxLogByCommentAndAutomation(event.commentId, matchedAutomation.id);
 
-  const privateReplyResult = isSimulatedComment
+  const privateReplyResult = hasSuccessfulInboxLog
+    ? {
+        success: true,
+        status: "skipped_duplicate" as const,
+        errorMessage: undefined
+      }
+    : isSimulatedComment
     ? {
         success: true,
         status: "skipped" as const,
         errorMessage: "Private reply skipped for simulated comment"
       }
     : await sendPrivateReplyToComment({
+        facebookPageId: page.page_id,
         pageAccessToken: page.page_access_token,
-        commentId: event.commentId,
-        commentMessage: matchedAutomation.inbox_message
+        facebookCommentId: event.commentId,
+        message: matchedAutomation.inbox_message
       });
 
   const publicReplyResult = await sendPublicReplyToComment({

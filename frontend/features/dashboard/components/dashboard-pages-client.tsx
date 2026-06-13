@@ -40,6 +40,7 @@ export function DashboardPagesClient({ realModeEnabled }: { realModeEnabled: boo
               <div className="mt-4 space-y-2 text-sm text-slate-500">
                 <p>Last synced: {page.last_synced_at ?? "-"}</p>
                 <p>Webhook: {page.webhook_subscribed ? `Subscribed${page.webhook_subscribed_at ? ` at ${page.webhook_subscribed_at}` : ""}` : "Not subscribed"}</p>
+                {Array.isArray(page.permissions) && !page.permissions.includes("pages_messaging") ? <p className="text-xs text-amber-600">Reconnect this Page after granting pages_messaging.</p> : null}
               </div>
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Button href={`/dashboard/posts?pageId=${page.id}`}>View Posts</Button>

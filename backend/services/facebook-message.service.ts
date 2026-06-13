@@ -1,4 +1,5 @@
 import { getServerEnv } from "@/backend/lib/env";
+import { facebookGraphPostForm, facebookGraphPostJson } from "@/backend/facebook/graph-api.client";
 
 export interface FacebookMessageResult {
   success: boolean;
@@ -18,25 +19,6 @@ interface PublicReplyInput {
   pageAccessToken: string | null;
   commentId: string;
   message: string | null;
-}
-
-async function fetchFacebookApi<T>(url: string, body: URLSearchParams) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: body.toString(),
-    cache: "no-store"
-  });
-
-  const data = (await response.json()) as T & { error?: { message?: string } };
-
-  if (!response.ok || data.error) {
-    throw new Error(data.error?.message || `Facebook API request failed (${response.status})`);
-  }
-
-  return data;
 }
 
 function isPermissionError(message: string) {
@@ -79,13 +61,10 @@ export async function sendPublicReplyToComment(input: PublicReplyInput): Promise
   }
 
   try {
-    const rawResponse = await fetchFacebookApi<{ id?: string }>(
-      `https://graph.facebook.com/${env.FACEBOOK_GRAPH_API_VERSION}/${input.commentId}/comments`,
-      new URLSearchParams({
+    const rawResponse = await facebookGraphPostForm<{ id?: string }>(`${input.commentId}/comments`, {
         message: input.message,
         access_token: input.pageAccessToken
-      })
-    );
+      });
 
     return {
       success: true,
@@ -131,30 +110,18 @@ export async function sendPrivateReplyToComment(input: PrivateReplyInput): Promi
   }
 
   try {
-    const response = await fetch(
-      `https://graph.facebook.com/v25.0/${input.facebookPageId}/messages?access_token=${encodeURIComponent(input.pageAccessToken)}`,
+    const rawResponse = await facebookGraphPostJson<{ id?: string }>(
+      `${input.facebookPageId}/messages`,
       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
+        recipient: {
+          comment_id: input.facebookCommentId
         },
-        body: JSON.stringify({
-          recipient: {
-            comment_id: input.facebookCommentId
-          },
-          message: {
-            text: input.message
-          }
-        }),
-        cache: "no-store"
-      }
+        message: {
+          text: input.message
+        }
+      },
+      input.pageAccessToken
     );
-
-    const rawResponse = (await response.json()) as { error?: { message?: string } };
-
-    if (!response.ok || rawResponse.error) {
-      throw new Error(rawResponse.error?.message || `Facebook private reply failed (${response.status})`);
-    }
 
     return {
       success: true,

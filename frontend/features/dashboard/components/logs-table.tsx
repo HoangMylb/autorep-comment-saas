@@ -16,10 +16,8 @@ const columns: ColumnsType<CommentLog> = [
     title: "Inbox",
     dataIndex: "inbox_status",
     key: "inbox_status",
-    render: (value: string, record: CommentLog) =>
-      value === "skipped" && record.source === "simulated_facebook"
-        ? <Tag color="gold">skipped (test)</Tag>
-        : value === "failed_permission"
+    render: (value: string) =>
+      value === "failed_permission"
           ? <Tag color="red">Missing pages_messaging</Tag>
           : <StatusBadge status={value} />
   },

@@ -8,7 +8,7 @@ export default async function AdminOverviewPage() {
   const overview = await getAdminOverview();
 
   return (
-    <PageShell title="Admin overview" description="System-wide visibility into users, demo pages, automations, and mock comment logs.">
+    <PageShell title="Admin overview" description="System-wide visibility into users, Facebook Pages, automations, and comment logs.">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <StatCard label="Users" value={overview.totalUsers} />
         <StatCard label="Active users" value={overview.activeUsers} />

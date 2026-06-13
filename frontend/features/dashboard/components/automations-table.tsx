@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import type { Automation } from "@/frontend/types/domain";
 import { apiClient } from "@/frontend/lib/api-client";
 import { formatDate } from "@/frontend/lib/utils";
-import { SendTestCommentModal } from "@/frontend/features/dashboard/components/send-test-comment-modal";
 import { StatusBadge } from "@/frontend/features/dashboard/components/status-badge";
 
 export function AutomationsTable({ automations }: { automations: Automation[] }) {
@@ -90,7 +89,6 @@ export function AutomationsTable({ automations }: { automations: Automation[] })
         <Space wrap>
           <Button onClick={() => router.push(`/dashboard/automations/${record.id}/edit`)}>Edit</Button>
           <Button onClick={() => router.push(`/dashboard/logs?automation=${record.id}`)}>View logs</Button>
-          <SendTestCommentModal facebookPostId={record.facebook_post_id} buttonLabel="Send test comment" />
           <Button danger onClick={() => handleDelete(record)}>Delete</Button>
         </Space>
       )

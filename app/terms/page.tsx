@@ -48,7 +48,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-lg font-semibold text-slate-900">5. Service availability</h2>
               <p>
-                The service is provided on an as-available basis. Features in mock mode or Facebook real mode may be added, limited,
+                The service is provided on an as-available basis. Facebook automation features may be added, limited,
                 disabled, or modified during product development.
               </p>
             </section>

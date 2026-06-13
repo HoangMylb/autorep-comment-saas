@@ -1,6 +1,6 @@
 import { withApiHandler } from "@/backend/middlewares/api-handler";
 import { requireUser } from "@/backend/lib/auth";
-import { createAutomationRecord, getUserAutomations } from "@/backend/services/mock-facebook.service";
+import { createAutomationRecord, getUserAutomations } from "@/backend/services/automation.service";
 
 export async function GET() {
   return withApiHandler(async () => {

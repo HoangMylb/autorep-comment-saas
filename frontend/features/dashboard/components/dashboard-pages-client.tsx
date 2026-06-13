@@ -6,7 +6,6 @@ import { StatusBadge } from "@/frontend/features/dashboard/components/status-bad
 import { ConnectFacebookButton } from "@/frontend/features/dashboard/components/connect-facebook-button";
 import { CheckFacebookWebhookButton } from "@/frontend/features/dashboard/components/check-facebook-webhook-button";
 import { DisconnectFacebookPageButton } from "@/frontend/features/dashboard/components/disconnect-facebook-page-button";
-import { SetupDemoButton } from "@/frontend/features/dashboard/components/setup-demo-button";
 import { SubscribeFacebookWebhookButton } from "@/frontend/features/dashboard/components/subscribe-facebook-webhook-button";
 import { SyncFacebookPostsButton } from "@/frontend/features/dashboard/components/sync-facebook-posts-button";
 import type { PagesPayload } from "@/frontend/types/api";
@@ -21,7 +20,7 @@ export function DashboardPagesClient({ realModeEnabled }: { realModeEnabled: boo
 
   return (
     <div className="space-y-4">
-      {!realModeEnabled ? <Card className="rounded-[20px] border-yellow-200 bg-yellow-50 text-sm text-yellow-800">Facebook integration is not configured yet. Mock mode is still available.</Card> : null}
+      {!realModeEnabled ? <Card className="rounded-[20px] border-yellow-200 bg-yellow-50 text-sm text-yellow-800">Facebook integration is not configured yet.</Card> : null}
       {pages.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {pages.map((page) => (
@@ -56,7 +55,6 @@ export function DashboardPagesClient({ realModeEnabled }: { realModeEnabled: boo
       ) : (
         <Empty description="No Facebook Pages yet">
           <div className="flex flex-wrap justify-center gap-3">
-            <SetupDemoButton />
             <ConnectFacebookButton disabled={!realModeEnabled} />
           </div>
         </Empty>

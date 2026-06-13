@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/backend/lib/auth";
-import { getAdminLogs } from "@/backend/services/mock-facebook.service";
+import { getAdminLogs } from "@/backend/services/comment-log.service";
 import { PageShell } from "@/frontend/components/common/page-shell";
 import { LogsTable } from "@/frontend/features/dashboard/components/logs-table";
 
@@ -9,7 +9,7 @@ export default async function AdminLogsPage({ searchParams }: { searchParams: Pr
   const logs = await getAdminLogs(filters);
 
   return (
-    <PageShell title="Logs" description="Admin visibility into mock and Facebook processing logs across the system.">
+    <PageShell title="Logs" description="Admin visibility into Facebook processing logs across the system.">
       <LogsTable logs={logs} />
     </PageShell>
   );

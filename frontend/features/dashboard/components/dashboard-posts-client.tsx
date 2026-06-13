@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { useAppQuery } from "@/frontend/hooks/use-app-query";
 import { formatDate } from "@/frontend/lib/utils";
-import { SendTestCommentModal } from "@/frontend/features/dashboard/components/send-test-comment-modal";
 import { StatusBadge } from "@/frontend/features/dashboard/components/status-badge";
 import type { PagesPayload, PostsPayload } from "@/frontend/types/api";
 
@@ -45,7 +44,6 @@ export function DashboardPostsClient() {
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button type="primary" href={`/dashboard/automations/new?postId=${post.id}`}>Create Automation</Button>
                 <Button href={`/dashboard/automations?postId=${post.id}`}>View Automations</Button>
-                {post.is_mock ? <SendTestCommentModal facebookPostId={post.id} /> : <Button disabled>Mock test only</Button>}
               </div>
             </Card>
           ))}

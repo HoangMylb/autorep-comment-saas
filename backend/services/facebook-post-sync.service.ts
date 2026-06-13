@@ -4,6 +4,7 @@ import { deleteFacebookPage, getPageById, markFacebookPageWebhookSubscribed, upd
 import { deletePostsByPage, getPostsByPageIds, markPostsMissingFromSyncAsStale, upsertFacebookPosts } from "@/backend/repositories/facebook-post.repository";
 import { deleteAutomationsByPage, getAutomationsByPageIds } from "@/backend/repositories/automation.repository";
 import { deleteLogsByAutomationIds, deleteLogsByPage, deleteLogsByPostIds } from "@/backend/repositories/comment-log.repository";
+import { facebookGraphGet, facebookGraphPostForm } from "@/backend/facebook/graph-api.client";
 
 interface FacebookGraphPostsResponse {
   data?: Array<{
@@ -18,22 +19,10 @@ interface FacebookGraphPostsResponse {
 }
 
 async function fetchFacebookPosts(pageId: string, pageAccessToken: string) {
-  const env = getServerEnv();
-  const params = new URLSearchParams({
+  const data = await facebookGraphGet<FacebookGraphPostsResponse>(`${pageId}/posts`, {
     fields: "id,message,full_picture,picture,permalink_url,created_time",
     access_token: pageAccessToken
   });
-
-  const response = await fetch(`https://graph.facebook.com/${env.FACEBOOK_GRAPH_API_VERSION}/${pageId}/posts?${params.toString()}`, {
-    cache: "no-store"
-  });
-
-  const data = (await response.json()) as FacebookGraphPostsResponse;
-
-  if (!response.ok || data.error) {
-    throw new Error(data.error?.message || `Facebook posts sync failed (${response.status})`);
-  }
-
   return data.data ?? [];
 }
 
@@ -202,41 +191,17 @@ export async function subscribeFacebookPageWebhook(userId: string, facebookPageR
     throw new Error("Missing Facebook page access token");
   }
 
-  const env = getServerEnv();
+    const env = getServerEnv();
 
-  try {
-    const params = new URLSearchParams();
-    params.append("access_token", page.page_access_token);
-    params.append("subscribed_fields", "feed");
+    try {
+      await facebookGraphPostForm<{ success?: boolean }>(`${page.page_id}/subscribed_apps`, {
+        access_token: page.page_access_token,
+        subscribed_fields: "feed"
+      });
 
-    const response = await fetch(`https://graph.facebook.com/v25.0/${page.page_id}/subscribed_apps`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: params.toString(),
-      cache: "no-store"
-    });
-
-    const result = (await response.json()) as { success?: boolean; error?: { message?: string } };
-
-    if (!response.ok || result.error) {
-      throw new Error(result.error?.message || "Failed to subscribe Facebook page webhook");
-    }
-
-    const verifyResponse = await fetch(
-      `https://graph.facebook.com/v25.0/${page.page_id}/subscribed_apps?access_token=${encodeURIComponent(page.page_access_token)}`,
-      {
-        method: "GET",
-        cache: "no-store"
-      }
-    );
-
-    const verifyResult = (await verifyResponse.json()) as { data?: Array<Record<string, unknown>>; error?: { message?: string } };
-
-    if (!verifyResponse.ok || verifyResult.error) {
-      throw new Error(verifyResult.error?.message || "Failed to verify Facebook page webhook subscription");
-    }
+      await facebookGraphGet<{ data?: Array<Record<string, unknown>> }>(`${page.page_id}/subscribed_apps`, {
+        access_token: page.page_access_token
+      });
 
     const updatedPage = await markFacebookPageWebhookSubscribed(page.id, userId);
 
@@ -291,26 +256,12 @@ export async function getFacebookPageWebhookStatus(userId: string, facebookPageR
 
   const env = getServerEnv();
 
-  const response = await fetch(
-    `https://graph.facebook.com/v25.0/${page.page_id}/subscribed_apps?access_token=${encodeURIComponent(page.page_access_token)}`,
-    {
-      method: "GET",
-      cache: "no-store"
-    }
-  );
-
-  const result = (await response.json()) as {
+  const result = await facebookGraphGet<{
     data?: Array<Record<string, unknown>>;
     error?: { message?: string };
-  };
-
-  if (!response.ok || result.error) {
-    const message = result.error?.message || "Failed to fetch Facebook page webhook status";
-    await updateFacebookPageStatus(page.id, userId, {
-      error_message: message
-    });
-    throw new Error(message);
-  }
+  }>(`${page.page_id}/subscribed_apps`, {
+    access_token: page.page_access_token
+  });
 
   const subscribedApps = result.data ?? [];
   const currentApp = subscribedApps.find((app) => String(app.id ?? "") === String(env.FACEBOOK_APP_ID ?? ""));

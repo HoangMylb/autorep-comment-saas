@@ -1,6 +1,6 @@
 import { withApiHandler } from "@/backend/middlewares/api-handler";
 import { requireAdmin } from "@/backend/lib/auth";
-import { getAdminPages } from "@/backend/services/mock-facebook.service";
+import { getAdminPages } from "@/backend/services/facebook-page.service";
 
 export async function GET() {
   return withApiHandler(async () => {

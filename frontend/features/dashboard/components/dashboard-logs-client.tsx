@@ -24,7 +24,7 @@ export function DashboardLogsClient() {
       <Card className="rounded-[20px] border-slate-200 text-sm text-slate-500">
         Active filters - source: {searchParams.get("source") ?? "all"}, processing: {searchParams.get("processing_status") ?? "all"}, status: {searchParams.get("status") ?? "all"}
       </Card>
-      {logs.length ? <LogsTable logs={logs} /> : <Empty description={`Create an automation${automations.length ? " and send a test comment" : " after generating demo data"} to see delivery results here.`} />}
+      {logs.length ? <LogsTable logs={logs} /> : <Empty description={automations.length ? "No logs yet. Real Facebook events will appear here after comments arrive." : "Create an automation to see Facebook processing logs here."} />}
     </div>
   );
 }

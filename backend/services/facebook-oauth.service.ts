@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { getServerEnv } from "@/backend/lib/env";
 import { logFacebookSystemEvent, maskSensitiveToken } from "@/backend/lib/facebook-log";
 import { upsertFacebookPages } from "@/backend/repositories/facebook-page.repository";
+import { facebookGraphGet } from "@/backend/facebook/graph-api.client";
 
 interface FacebookPageDto {
   page_id: string;
@@ -39,7 +40,6 @@ const FACEBOOK_OAUTH_SCOPES = [
   "pages_manage_engagement",
   "pages_read_user_content",
   "pages_messaging"
-  
 ] as const;
 
 function requireFacebookConfig() {
@@ -68,17 +68,6 @@ function parseState(state: string) {
   return { userId, nonce };
 }
 
-async function fetchJson<T>(url: string) {
-  const response = await fetch(url, { cache: "no-store" });
-  const data = (await response.json()) as T & { error?: { message?: string } };
-
-  if (!response.ok || data?.error) {
-    throw new Error(data?.error?.message || `Facebook API request failed (${response.status})`);
-  }
-
-  return data;
-}
-
 export function getFacebookLoginUrl(userId: string) {
   const env = requireFacebookConfig();
   const state = buildState(userId);
@@ -99,37 +88,29 @@ export function getFacebookLoginUrl(userId: string) {
 
 export async function exchangeCodeForUserAccessToken(code: string) {
   const env = requireFacebookConfig();
-  const redirectUri = `${env.NEXT_PUBLIC_APP_URL}/api/facebook/callback`;
-  const params = new URLSearchParams({
+  return facebookGraphGet<AccessTokenResponse>("oauth/access_token", {
     client_id: env.FACEBOOK_APP_ID!,
     client_secret: env.FACEBOOK_APP_SECRET!,
-    redirect_uri: redirectUri,
+    redirect_uri: `${env.NEXT_PUBLIC_APP_URL}/api/facebook/callback`,
     code
   });
-
-  return fetchJson<AccessTokenResponse>(`https://graph.facebook.com/${env.FACEBOOK_GRAPH_API_VERSION}/oauth/access_token?${params.toString()}`);
 }
 
 export async function getLongLivedUserAccessToken(shortLivedToken: string) {
   const env = requireFacebookConfig();
-  const params = new URLSearchParams({
+  return facebookGraphGet<AccessTokenResponse>("oauth/access_token", {
     grant_type: "fb_exchange_token",
     client_id: env.FACEBOOK_APP_ID!,
     client_secret: env.FACEBOOK_APP_SECRET!,
     fb_exchange_token: shortLivedToken
   });
-
-  return fetchJson<AccessTokenResponse>(`https://graph.facebook.com/${env.FACEBOOK_GRAPH_API_VERSION}/oauth/access_token?${params.toString()}`);
 }
 
 export async function fetchUserPages(userAccessToken: string) {
-  const env = requireFacebookConfig();
-  const params = new URLSearchParams({
+  return facebookGraphGet<FacebookAccountsResponse>("me/accounts", {
     fields: "id,name,access_token,picture{url},tasks",
     access_token: userAccessToken
   });
-
-  return fetchJson<FacebookAccountsResponse>(`https://graph.facebook.com/${env.FACEBOOK_GRAPH_API_VERSION}/me/accounts?${params.toString()}`);
 }
 
 export async function saveFacebookPages(userId: string, pages: FacebookPageDto[]) {

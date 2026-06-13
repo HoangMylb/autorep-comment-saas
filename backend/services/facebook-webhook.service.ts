@@ -5,7 +5,7 @@ import { getPageByFacebookPageId } from "@/backend/repositories/facebook-page.re
 import { createPlaceholderFacebookPost, getPostByFacebookPostId } from "@/backend/repositories/facebook-post.repository";
 import { getServerEnv } from "@/backend/lib/env";
 import { sendPrivateReplyToComment, sendPublicReplyToComment } from "@/backend/services/facebook-message.service";
-import { matchKeyword } from "@/backend/services/mock-facebook.service";
+import { matchKeyword } from "@/backend/services/keyword-match.service";
 
 interface FacebookCommentEvent {
   pageId: string;
@@ -113,7 +113,7 @@ async function createSkippedLog(input: {
   processingStatus: "skipped" | "failed" | "processed";
   errorMessage: string;
   rawPayload: Record<string, unknown>;
-  source?: "facebook" | "simulated_facebook";
+  source?: "facebook";
   eventType?: string;
 }) {
   return createLog({
@@ -344,7 +344,6 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
 
   const matchedKeyword = matchKeyword(event.commentMessage, matchedAutomation.keywords);
   const errorMessages = [] as string[];
-  const isSimulatedComment = event.commentId.startsWith("test_") || event.commentId.startsWith("mock_");
   const hasSuccessfulInboxLog = await findSuccessfulInboxLogByCommentAndAutomation(event.commentId, matchedAutomation.id);
 
   const privateReplyResult = hasSuccessfulInboxLog
@@ -352,12 +351,6 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
         success: true,
         status: "skipped_duplicate" as const,
         errorMessage: undefined
-      }
-    : isSimulatedComment
-    ? {
-        success: true,
-        status: "skipped" as const,
-        errorMessage: "Private reply skipped for simulated comment"
       }
     : await sendPrivateReplyToComment({
         facebookPageId: page.page_id,
@@ -400,7 +393,7 @@ export async function processCommentEvent(event: FacebookCommentEvent) {
     matched_keyword: matchedKeyword,
     inbox_status: privateReplyResult.status,
     public_reply_status: publicReplyResult.status,
-    source: isSimulatedComment ? "simulated_facebook" : "facebook",
+    source: "facebook",
     event_type: "comment",
     processing_status: processingStatus,
     error_message: errorMessages.join(" | "),

@@ -1,6 +1,6 @@
 import { withApiHandler } from "@/backend/middlewares/api-handler";
 import { requireUser } from "@/backend/lib/auth";
-import { deleteAutomationRecord, getAutomationRecord, updateAutomationRecord } from "@/backend/services/mock-facebook.service";
+import { deleteAutomationRecord, getAutomationRecord, updateAutomationRecord } from "@/backend/services/automation.service";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   return withApiHandler(async () => {

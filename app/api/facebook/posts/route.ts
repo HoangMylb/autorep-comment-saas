@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { withApiHandler } from "@/backend/middlewares/api-handler";
 import { requireUser } from "@/backend/lib/auth";
-import { getUserPosts } from "@/backend/services/mock-facebook.service";
+import { getUserPosts } from "@/backend/services/facebook-post.service";
 
 export async function GET(request: NextRequest) {
   return withApiHandler(async () => {

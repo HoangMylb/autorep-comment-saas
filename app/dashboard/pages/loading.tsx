@@ -3,7 +3,7 @@ import { DashboardLoadingShell } from "@/frontend/components/common/dashboard-lo
 
 export default function Loading() {
   return (
-    <PageShell title="Facebook Pages" description="Use mock mode or connect a real Facebook Page to drive automations.">
+    <PageShell title="Facebook Pages" description="Connect a real Facebook Page to drive automations.">
       <DashboardLoadingShell rows={3} />
     </PageShell>
   );

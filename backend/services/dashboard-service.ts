@@ -1,7 +1,7 @@
 import { getProfileById } from "@/backend/repositories/profile-repository";
 import { getAutomationsByUser } from "@/backend/repositories/automation.repository";
 import { getPagesByUser } from "@/backend/repositories/facebook-page.repository";
-import { getUserLogs } from "@/backend/services/mock-facebook.service";
+import { getUserLogs } from "@/backend/services/comment-log.service";
 
 export async function getDashboardOverview(userId: string) {
   const [profile, pages, automations, logs] = await Promise.all([

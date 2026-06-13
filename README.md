@@ -1,9 +1,6 @@
 # AutoRep Affiliate - Phase 4
 
-AutoRep Affiliate is a Next.js fullstack app deployed on **Vercel + Supabase** with two parallel operating modes:
-
-- **Mock Mode** for safe product demo and local validation
-- **Facebook Real Mode** for MVP Facebook Page connection, post sync, webhook ingestion, and automation matching
+AutoRep Affiliate is a Next.js fullstack app deployed on **Vercel + Supabase** for Facebook Page connection, post sync, webhook ingestion, and automation matching.
 
 The app remains fully inside Next.js:
 
@@ -97,7 +94,6 @@ Rules:
 3. Run migrations in order:
 
    - `supabase/migrations/20260611120000_init.sql`
-   - `supabase/migrations/20260611143000_phase2_mock_mode.sql`
    - `supabase/migrations/20260611190000_phase4_facebook_real_mode.sql`
 
 4. Start the app:
@@ -217,11 +213,6 @@ All app APIs use this shape:
 - `POST /api/auth/logout`
 - `GET /api/me`
 
-### Mock Facebook
-
-- `POST /api/mock/facebook/setup-demo`
-- `POST /api/mock/facebook/send-test-comment`
-
 ### Facebook page/post sync
 
 - `GET /api/facebook/pages`
@@ -258,38 +249,10 @@ All app APIs use this shape:
 - `GET /api/admin/logs`
 - `GET /api/admin/overview`
 
-## Mock Mode flow
-
-Use this exact flow to validate Mock Mode:
-
-1. Register a new user
-2. Login
-3. Open `/dashboard`
-4. Click **Use Demo Facebook Page**
-5. Confirm a demo page and demo posts are created
-6. Open `/dashboard/pages`
-7. Open `/dashboard/posts`
-8. Create automation with:
-   - keywords: `xin giá`, `xin gia`, `giá`, `gia`
-   - inbox message: `Mình gửi bạn thông tin giá tại đây...`
-   - public reply: `Mình đã gửi thông tin vào inbox cho bạn nhé`
-9. Send test comment:
-   - commenter name: `Nguyễn Văn A`
-   - message: `cho mình xin giá`
-10. Confirm log success
-11. Send test comment again with:
-   - message: `hello shop`
-12. Confirm log skipped
-13. Disable automation
-14. Send `xin giá` again
-15. Confirm skipped / no active automation behavior
-16. Login as admin and verify `/admin` screens show full data
-
 ## Facebook Real Mode overview
 
 Real mode is designed defensively:
 
-- Mock Mode remains fully available
 - missing permissions must not crash the app
 - expired tokens should mark page status as `expired`
 - unsupported webhook payloads should be logged, not crash
@@ -300,7 +263,6 @@ Real mode is designed defensively:
 #### `ENABLE_FACEBOOK_REAL_MODE=false`
 
 - Facebook connect button should remain disabled
-- Mock Mode still works
 
 #### `ENABLE_FACEBOOK_SEND_MESSAGE=false`
 
@@ -363,8 +325,6 @@ FACEBOOK_VERIFY_TOKEN=
 Some permissions may require Meta App Review before they work for real end users.
 
 In development mode, only app admins, developers, and testers may be able to use the Facebook flow reliably.
-
-If permissions are not yet approved, keep using Mock Mode for product demos.
 
 ## Facebook OAuth flow
 
@@ -484,7 +444,6 @@ If you need real login users, create them through Supabase Auth or through the a
 Run in Supabase SQL Editor:
 
 - `supabase/migrations/20260611120000_init.sql`
-- `supabase/migrations/20260611143000_phase2_mock_mode.sql`
 - `supabase/migrations/20260611190000_phase4_facebook_real_mode.sql`
 
 ### 3. Configure Supabase auth URLs
@@ -519,13 +478,6 @@ ENABLE_FACEBOOK_PUBLIC_REPLY=false
 Push to GitHub and deploy on Vercel.
 
 ## Phase 4 testing checklist
-
-### Mock Mode
-
-- use demo page
-- create automation
-- send test comment
-- verify success/skipped logs
 
 ### Facebook OAuth
 

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { withApiHandler } from "@/backend/middlewares/api-handler";
 import { requireAdmin } from "@/backend/lib/auth";
-import { getAdminLogs } from "@/backend/services/mock-facebook.service";
+import { getAdminLogs } from "@/backend/services/comment-log.service";
 
 export async function GET(request: NextRequest) {
   return withApiHandler(async () => {
